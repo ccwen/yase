@@ -1,0 +1,333 @@
+﻿/*
+	better tag support, finer granularity 
+
+	split the input file into sentences.
+	textseq is a continuos number.
+	each posting = textseq<<blockshift + offset_in_sentence
+
+	multilevel id . each id point to a posting
+	user may choose to remove or keep tag during indexing.
+
+	<pb ed="xx" n="xx"/> will probably removed.
+	
+	text saving strategy:
+	a file is sliced into sentences.
+	sentence has a mininum size of 64 tokens. 1 slot.
+	long sentence will overflow to another slot.
+	
+	
+	internal document pointer = slot+token offset
+
+	tag saving strategy:
+	a tag will convert into key,
+	    1)where the key is unique and *sane*:
+	        multiple level key , with a attached posting number. (vint)
+	        defer loading is support, lookup is fast once the group is loaded.
+	    2) where the key is unique but not sane:
+	       a sorted stringlist with an array of vint.
+	       which is fast for thousands of keys and provide very fast lookup,
+	        but slower on loading
+	    3) the key is not unique , or natural order of keys must be keeped
+	        a unsorted stringlist with an array of packed posting number (sorted)
+
+	2013/5/4
+
+	2013/8/6
+	move to git, create npm
+
+	yapcheahshen@gmail.com
+
+*/
+var fs=require('fs');
+var splitter=require('./splitter');
+
+var taginfo={ //default behavior, remove:false, index:false
+	'pb' :{ remove:true, index:true},
+	'lb' : { remove:true, index:true},
+}
+
+var Parser = function(context,buffer) {
+	context.isBreaker=context.customfunc.isBreaker;
+	buffer=buffer.replace(/\r\n/g,'\n');
+	buffer=buffer.replace(/\r/g,'\n');		
+	context.onsentence = context.onsentence || function(){};
+	context.ontag = context.ontag || function(){};
+	context.sentence='';
+	context.hidetext=false;
+	var i=0;
+	while (i<buffer.length) {
+		t=buffer[i];
+		if (context.isBreaker(t)) {
+			while (t&& (context.isBreaker(t) || t==' ') && i<buffer.length) {
+				context.sentence+=t;
+				t=buffer[++i];
+			}
+			context.onsentence.call(context);
+		} else if (t=='<') {
+			var tag='';
+			while (i<buffer.length) {
+				tag+=buffer[i++];
+				if (buffer[i-1]=='>') break;
+			}
+			/*
+			context.sentence+=opts.ontag.apply(context, [tag]);
+			no working as expected , because context.sentence is changed in ontag handler
+			*/
+			var r=context.ontag.apply(context, [tag]);
+			context.sentence+=r;
+		} else {
+			if (!context.hidetext) {
+				context.sentence+=t;
+			}
+			i++;
+		}
+	}
+	if (context.sentence) context.onsentence.call(context);
+}
+var extracttagname=function(xml) {
+	var tagname=xml.substring(1);
+	if (tagname[0]=='/') tagname=tagname.substring(1);
+	tagname=tagname.match(/(.*?)[ \/>]/)[1];	
+	return tagname;
+}
+
+
+var initialize=function(context) {
+	context.taginfo=context.taginfo||{} ;
+	if (typeof context.tags=='undefined') context.tags={};
+	if (typeof context.totalsentencecount=='undefined') {
+		context.totalsentencecount=0;
+	}
+	
+	context.initialized=true;
+}
+var parsefile=function(context,filebuffer) {
+	var setuphandler=function() {
+		for (var i in context.taginfo) {
+			var h=context.taginfo[i].handler;
+			if (typeof h == 'string') {
+				context.taginfo[i].handler=taghandlers[h];
+			}
+		}
+	}	
+	context.onsentence=function() {
+		this.sentences.push(this.sentence);
+		//console.log(this.sentences.length,this.sentence);
+		this.sentence='';
+	}
+		
+	context.ontag=function(tag) {
+		var tagname=extracttagname(tag);
+		var ti=this.taginfo[tagname];
+		if (!ti) ti={};
+		ti.tagname=tagname;
+		ti.opentag=true;
+		ti.closetag=false;
+		ti.tag=tag;
+
+		if (tag.substr(tag.length-2,1)=='/') ti.closetag=true;
+		if (tag.substr(1,1)=='/') {ti.closetag=true; ti.opentag=false;}
+
+		if (ti.comment) {
+			if (ti.opentag) context.hidetext=true;
+			if (ti.closetag) context.hidetext=false;
+		}
+
+		if (ti.handler) ti.handler.apply(this,[ti, this.sentence.length]);
+		return defaulttaghandler.apply(this,[ti,this.sentence.length]);
+	}
+	if (!context.initialized) throw ' not initialized'
+	context.sentences=[];	
+	setuphandler();
+	var parser=new Parser(context,filebuffer);
+	context.totalsentencecount+=context.sentences.length;
+}
+/* handle slot overflow */
+var addslot=function(context, tokencount,sentence) {
+	var extraslot=  Math.floor( tokencount / context.maxslottoken ); //overflow
+	if (extraslot>0) {
+		//console.log('overflow '+tokencount,sentence.substring(0,30)+'...');
+	}
+	var slotgroup=Math.floor(context.slotcount / context.slotperbatch );//
+	if (!context.slottexts[slotgroup]) context.slottexts[slotgroup]=[];
+	context.slottexts[slotgroup].push( sentence);
+	context.sentence2slot[context.nsentence]=context.slotcount;
+	context.slotcount+=(1+extraslot);
+	context.extraslot+=extraslot;
+	context.nsentence++;
+	while (extraslot--) {
+		context.slottexts[slotgroup].push(''); //insert null slot
+	}
+}
+/* convert tags sentence number to slot number */
+var tagsentence2slot=function(tags, mapping){
+	if (!tags._slot) return; //some tag has no slot field
+	for (var j=0;j<tags._slot.length;j++ ) {
+		tags._slot[j]= mapping[ tags._slot[j] ];
+	}
+}
+var initcontext=function(context) {
+	context.settings=context.settings || {};
+	context.customfunc=context.customfunc||{};
+	context.slotperbatch=context.slotperbatch||256;
+	context.meta=context.meta||{};
+	context.settings.blockshift=context.meta.blockshift||5;
+	context.normalize=context.normalize || function( t) {return t.trim()};
+	context.maxslottoken = 2 << (context.settings.blockshift -1);
+	//console.log('context.meta.blockshift',context.settings.blockshift, ' maxslottoken',context.maxslottoken)
+
+	if (typeof context.slottexts=='undefined') { //first file
+		context.nsentence=0;
+		context.slotcount=0;
+		context.extraslot=0;
+		context.sentence2slot=[]; // sentence number to slot number mapping
+		context.slottexts=[];	
+	}
+}
+var build=function(context) {
+
+	initcontext(context);	
+	if (!context.invert) {
+		throw ' please supply invert builder'
+	}
+	for (var i=0;i<context.sentences.length;i++) {
+		var splitted=context.invert.addslot(context.slotcount, context.sentences[i]);
+		var indexabletokencount=splitted.tokens.length-splitted.skiptokencount;
+		addslot(context, indexabletokencount, context.sentences[i]);
+	}
+
+	return true;
+}
+
+var finalize=function(context) {
+	//convert sentence seq to slot seq
+	for (var i in context.tags) {
+		tagsentence2slot(context.tags[i], context.sentence2slot);
+	}
+	for (var i in context.tagattributeslots) tagsentence2slot(context.tagattributeslots[i], context.sentence2slot);
+	context.sentence2slot=null;	
+}
+/*
+	split multilevel id and create tree structure
+*/
+var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
+	var idarr=null;
+	if (ai.cbid2tree) idarr=ai.cbid2tree(id); else {
+		if (depth==1) {
+			idarr=[id];
+		} else {
+			idarr=id.split('.');		
+		}
+	}
+	if (idarr.length>depth) {
+		throw 'id depth exceed';
+		return;
+	}
+	while (idarr.length<depth) idarr.push('0');
+	for (var i=0;i<idarr.length-1;i++) {
+		if (!obj[ idarr[i]]) obj[ idarr[i]]={};
+		obj = obj[ idarr[i]];
+	}
+	var val=idarr[idarr.length-1];
+
+	if (typeof obj[val] !=='undefined') {
+		if (ai.allowrepeat) {
+			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
+			obj[val].push( nslot );
+		} else {
+			console.log('repeated val:',val, ', tagname:',tagname);
+		}
+	} else  {
+		obj[val]= nslot; 
+	} 
+}
+var defaulttaghandler=function(taginfo,offset) {
+	var k=taginfo.tagname;
+	var hidetag=false;
+	if (taginfo.append) k+=taginfo.append;
+	if (!this.tags[k]) this.tags[k]={ _count:0};
+	this.tags[k]._count++;
+
+	if (taginfo.newslot && this.sentence) {
+		if (taginfo.closetag) {
+			if (taginfo.savehead ||taginfo.saveheadkey) {
+				var k=taginfo.tagname;
+				if (!this.tags[k]) this.tags[k]={};
+				
+				var p=this.sentence.indexOf('>');
+				var headline=this.sentence.substring(p+1);
+				if (taginfo.saveheadkey)  {
+					var H=this.tags[k][taginfo.saveheadkey];
+					if (!H) {
+						H=this.tags[k][taginfo.saveheadkey]={ slot:[],ntag :[],head:[] };
+						if (!this.tagattributeslots) this.tagattributeslots=[];
+						this.tagattributeslots.push(H);
+					}
+
+					var slot=this.totalsentencecount + this.sentences.length;
+					H.ntag.push( (this.tags[k]._count-2) /2 );
+					H._slot.push( slot );
+					H._head.push(headline);
+					//console.log(slot,this.tags[k].count,headline)
+					taginfo.saveheadkey='';
+				} else {
+					if (typeof this.tags[k]._head=='undefined') this.tags[k]._head=[];
+					this.tags[k]._head.push(headline);
+				}
+			}
+			this.sentence+=taginfo.tag;
+			hidetag=true; //remove closetag as already put into sentence
+		}
+		this.onsentence.call(this);
+	}
+
+	if (taginfo.savepos && taginfo.opentag) {
+		if (!this.tags[k]._slot) this.tags[k]._slot=[];
+		if (!this.tags[k]._offset) this.tags[k]._offset=[];
+		this.tags[k]._slot.push(this.totalsentencecount + this.sentences.length);
+		this.tags[k]._offset.push(offset);
+	}
+
+	if (taginfo.indexattributes && taginfo.opentag) for (var i in taginfo.indexattributes) {
+		var attrkey=i+'=';
+		if (!this.tags[k][attrkey]) this.tags[k][attrkey]={};
+		var val=taginfo.tag.match( taginfo.indexattributes[i].regex);		
+		if (val) {
+			if (val.length>1) val=val[1]; else val=val[0];
+			var depth=taginfo.indexattributes[i].depth || 1;
+			//console.log(attrkey,val,this.tags[k][attrkey],depth)
+			iddepth2tree(this.tags[k][attrkey], val, this.tags[k]._slot.length -1,  depth, taginfo.indexattributes[i] , taginfo.tagname);
+			if (taginfo.indexattributes[i].savehead) {
+				taginfo.saveheadkey=attrkey+val;
+			}
+		} else if (!taginfo.indexattributes[i].allowempty) {
+			throw 'empty val '+taginfo.tag
+		} 
+
+		if (taginfo.indexattributes[i].saveval) {
+			if (!this.tags[k][i]) this.tags[k][i]=[];
+			if (!val) val="";
+			this.tags[k][i].push(val);
+		}
+	}
+
+	if (hidetag||taginfo.comment|| taginfo.remove) return '' ;else return taginfo.tag;	
+}
+var taghandlers = {
+	pb: function(taginfo,offset) {
+		if (taginfo.closetag && !taginfo.opentag) return;
+		var k=taginfo.tagname;
+		var ed=taginfo.tag.match(/ ed="(.*?)"/);
+		if (ed) {	
+			ed=ed[1]; 
+			taginfo.append="."+ed; //with edition
+		}
+		//if (typeof taginfo.remove =='undefined') taginfo.remove=true;
+	}
+}
+//var API={parsefile:parsefile,build:build,finalize:finalize,initialize:initialize};
+var Create=function() {
+	
+	return handle;
+}
+module.exports=create;
