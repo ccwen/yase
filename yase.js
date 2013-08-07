@@ -353,7 +353,7 @@ var fetchPage=function(tagname,seq,opts) {
 	return r;
 }
 
-Yadm = function(fn) { 
+var Yase = function(fn) { 
 	var db = null;
 	var dmload=function(instance) {
 		instance.meta=db.get(['meta'],true);

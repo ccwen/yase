@@ -1,4 +1,3 @@
-var base64=require('./base64');
 
 var unpack = function (ar) { // unpack variable length integer list
   var r = [],
@@ -13,11 +12,6 @@ var unpack = function (ar) { // unpack variable length integer list
 	r.push(v);
   } while (i < ar.length);
   return r;
-}
-var loadfrombase64 = function (b64) { // return array
-  if (!b64) return [];
-  var ar = base64.decode(b64);
-  return unpack(ar);
 }
 var groupbyblock = function (ar, blockshift, opts) {
   if (!ar.length)
@@ -104,7 +98,7 @@ var plphrase = function (postings) {
 var plist={};
 plist.unpack=unpack;
 plist.plphrase=plphrase;
-plist.loadfrombase64=loadfrombase64;
+
 plist.groupbyblock=groupbyblock;
 module.exports=plist;
 return plist;

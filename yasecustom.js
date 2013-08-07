@@ -1,5 +1,5 @@
 /*
-  these functions will be part
+  these functions will be part of ydb
 */
 var dmversion=function() { return 0x20130702};
 

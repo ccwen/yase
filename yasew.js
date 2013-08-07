@@ -1,7 +1,7 @@
-/*
+﻿/*
 	better tag support, finer granularity 
 
-	split(/。，/); //split the input file into sentences.
+	split the input file into sentences.
 	textseq is a continuos number.
 	each posting = textseq<<blockshift + offset_in_sentence
 
@@ -9,150 +9,381 @@
 	user may choose to remove or keep tag during indexing.
 
 	<pb ed="xx" n="xx"/> will probably removed.
-	pb(xx) : {
-		1:  { '20a' : posting ,'20b':posting ,'21a':posting },
-		2:  { '20a' : posting ,'20b':posting ,'21a':posting },
-	}
+	
+	text saving strategy:
+	a file is sliced into sentences.
+	sentence has a mininum size of 64 tokens. 1 slot.
+	long sentence will overflow to another slot.
+	
+	
+	internal document pointer = slot+token offset
+
+	tag saving strategy:
+	a tag will convert into key,
+	    1)where the key is unique and *sane*:
+	        multiple level key , with a attached posting number. (vint)
+	        defer loading is support, lookup is fast once the group is loaded.
+	    2) where the key is unique but not sane:
+	       a sorted stringlist with an array of vint.
+	       which is fast for thousands of keys and provide very fast lookup,
+	        but slower on loading
+	    3) the key is not unique , or natural order of keys must be keeped
+	        a unsorted stringlist with an array of packed posting number (sorted)
+
 	2013/5/4
 
-  default worker for building YA
+	2013/8/6
+	move to git, create npm
+
+	yapcheahshen@gmail.com
+
 */
-var Yadb3w=require('./yadb3w.js');	
 var fs=require('fs');
-var path=require('path');
-var Invert=require('./invert4');
-var Yadmworker=require('./yasew');
+var splitter=require('./splitter');
+var Invert=require('./invert');
+var schema=require('./schema');
+var Yadb=require('yadb');
 
-var log=function(status,msg) { //send log to browser
-	status.log.push(msg);
-	console.log(msg);
-}
-var outback = function (s) {
-    while (s.length < 70) s += ' ';
-    var l = s.length; 
-    for (var i = 0; i < l; i++) s += String.fromCharCode(8);
-    process.stdout.write(s);
-}
+var parse = function(buffer) {
+	context=this.context;
+	buffer=buffer.replace(/\r\n/g,'\n');
+	buffer=buffer.replace(/\r/g,'\n');		
+	context.onsentence = context.onsentence || onsentence;
+	context.ontag = context.ontag || ontag;
+	context.sentence='';
+	context.hidetext=false;
 
-var initstatus=function(status) {
-	status.tokencount=0;  //total token count
-	status.lineprocessed=0; //total line processed
-}
-
-var processfile=function(fn,session,callback) {
-	outback(fn);
-    //console.log('processing '+fn);
-	session.status.nline=0; //line number of this file
-	var absfn=fn;
-	if (session.request.datadir) {
-		absfn=path.resolve(session.request.datadir,fn);
+	var i=0;
+	while (i<buffer.length) {
+		t=buffer[i];
+		if (this.customfunc.isBreaker(t)) {
+			while (t&& (this.customfunc.isBreaker(t) || t==' ') && i<buffer.length) {
+				context.sentence+=t;
+				t=buffer[++i];
+			}
+			context.onsentence.call(context);
+		} else if (t=='<') {
+			var tag='';
+			while (i<buffer.length) {
+				tag+=buffer[i++];
+				if (buffer[i-1]=='>') break;
+			}
+			/*
+			context.sentence+=opts.ontag.apply(context, [tag]);
+			no working as expected , because context.sentence is changed in ontag handler
+			*/
+			var ti=this.options.schema[tag];
+			var r=context.ontag.apply(this, [tag, ti]);
+			context.sentence+=r;
+		} else {
+			if (!context.hidetext) {
+				context.sentence+=t;
+			}
+			i++;
+		}
 	}
-	var s = fs.readFileSync(absfn,session.request.encoding);
-	session.taginfo=session.request.taginfo;
-	//session.indexcrlf=true;
-	//session.crlfreplacechar='';
-	session.slotperbatch = session.meta.slotperbatch;
-	//session.crlfperbatch = session.meta.crlfperbatch;
-	Yadmworker.parsefile(session,s);
-	//console.log('number of sentences',session.sentences.length)
-	Yadmworker.build(session);
-	//console.log('slottext length',session.slottexts.length)
-	callback(0);
+	if (context.sentence) context.onsentence.call(context);
+
+}
+var extracttagname=function(xml) {
+	var tagname=xml.substring(1);
+	if (tagname[0]=='/') tagname=tagname.substring(1);
+	tagname=tagname.match(/(.*?)[ \/>]/)[1];	
+	return tagname;
 }
 
+var onsentence=function() {
+	this.sentences.push(this.sentence);
+	//console.log(this.sentences.length,this.sentence);
+	this.sentence='';
+}
+	
+var ontag=function(tag, ti) {
+	context=this.context;
+	var tagname=extracttagname(tag);
+	if (!ti) ti={};
+	ti.tagname=tagname;
+	ti.opentag=true;
+	ti.closetag=false;
+	ti.tag=tag;
 
-var initialize=function(session,callback) {
-	initstatus(session.status);
-	session.meta=session.meta || {};
-	session.meta.slotperbatch=256;
-	//session.meta.crlfperbatch=1024;
-	if (!session.customfunc.splitter) {
-		session.customfunc.splitter = require('../ksanadb/splitter');
+	if (tag.substr(tag.length-2,1)=='/') ti.closetag=true;
+	if (tag.substr(1,1)=='/') {ti.closetag=true; ti.opentag=false;}
+
+	if (ti.comment) {
+		if (ti.opentag) context.hidetext=true;
+		if (ti.closetag) context.hidetext=false;
 	}
 
-	yadb3=	new Yadb3w(session.request.outputfilename,session.request);
-	var strencoding=session.request.ydbencoding||session.request.encoding||'utf8'
-	yadb3.stringEncoding(strencoding);	
-	yadb3.openObject();
-	var invertopts={splitter:session.customfunc.splitter||splitter,blockshift:session.meta.blockshift};
-	session.invert=Invert.create(invertopts);
-	Yadmworker.initialize(session);
-	log(session.status,'default ydb worker initialized',true);
-	setImmediate( function() {callback(0);});	
-	console.time('scanfile');
+	if (ti.handler) ti.handler.apply(this,[ti, context.sentence.length]);
+	return defaulttaghandler.apply(this,[ti,context.sentence.length]);
 }
-var packcustomfunc=function(session) {
+
+
+var addfilebuffer=function(filebuffer) {
+	var context=this.context;
+	context.sentences=[];	
+	parse.apply(this,[filebuffer]);
+	context.totalsentencecount+=context.sentences.length;
+}
+/* handle slot overflow */
+var addslot=function(tokencount,sentence) {
+	output=this.output;
+	context=this.context;
+	options=this.options;
+	var extraslot=  Math.floor( tokencount / context.maxslottoken ); //overflow
+	if (extraslot>0) {
+		//console.log('overflow '+tokencount,sentence.substring(0,30)+'...');
+	}
+	var slotgroup=Math.floor(context.slotcount / options.slotperbatch );//
+
+	if (!output.texts[slotgroup]) output.texts[slotgroup]=[];
+	output.texts[slotgroup].push( sentence);
+	context.sentence2slot[context.nsentence]=context.slotcount;
+	context.slotcount+=(1+extraslot);
+	context.extraslot+=extraslot;
+	context.nsentence++;
+	while (extraslot--) {
+		output.texts[slotgroup].push(''); //insert null slot
+	}
+}
+/* convert tags sentence number to slot number */
+var tagsentence2slot=function(tags, mapping){
+	if (!tags._slot) return; //some tag has no slot field
+	for (var j=0;j<tags._slot.length;j++ ) {
+		tags._slot[j]= mapping[ tags._slot[j] ];
+	}
+}
+var initialize=function(options,context,output) {
+	options.slotperbatch=options.slotperbatch||256;
+	options.blockshift=options.blockshift||6;
+	output.meta=output.meta||{};
+	context.normalize=context.normalize || function( t) {return t.trim()};
+	context.maxslottoken = 2 << (options.blockshift -1);
+	//console.log('context.meta.blockshift',context.settings.blockshift, ' maxslottoken',context.maxslottoken)
+	if (typeof output.texts=='undefined') { //first file
+		context.nsentence=0;
+		context.slotcount=0;
+		context.extraslot=0;
+		context.sentence2slot=[]; // sentence number to slot number mapping
+		output.texts=[];	
+	}
+
+
+	if (typeof output.tags=='undefined') output.tags={};
+	if (typeof context.totalsentencecount=='undefined') {
+		context.totalsentencecount=0;
+	}
+
+
+}
+var construct=function() {
+	if (!this.invert) this.invert=new Invert({splitter: this.options.splitter,blockshift: this.options.blockshift });
+	this.output.postings=this.invert.postings;
+	for (var i=0;i<this.context.sentences.length;i++) {
+		var splitted=this.invert.addslot(this.context.slotcount, this.context.sentences[i]);
+		var indexabletokencount=splitted.tokens.length-splitted.skiptokencount;
+		addslot.apply(this,[indexabletokencount, this.context.sentences[i]]);
+	}
+
+
+	return this;
+}
+
+/*
+	split multilevel id and create tree structure
+*/
+var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
+	var idarr=null;
+	if (ai.cbid2tree) idarr=ai.cbid2tree(id); else {
+		if (depth==1) {
+			idarr=[id];
+		} else {
+			idarr=id.split('.');		
+		}
+	}
+	if (idarr.length>depth) {
+		throw 'id depth exceed';
+		return;
+	}
+	while (idarr.length<depth) idarr.push('0');
+	for (var i=0;i<idarr.length-1;i++) {
+		if (!obj[ idarr[i]]) obj[ idarr[i]]={};
+		obj = obj[ idarr[i]];
+	}
+	var val=idarr[idarr.length-1];
+
+	if (typeof obj[val] !=='undefined') {
+		if (ai.allowrepeat) {
+			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
+			obj[val].push( nslot );
+		} else {
+			console.log('repeated val:',val, ', tagname:',tagname);
+		}
+	} else  {
+		obj[val]= nslot; 
+	} 
+}
+var defaulttaghandler=function(taginfo,offset) {
+	var k=taginfo.tagname;
+	var tags=this.output.tags;
+	var hidetag=false;
+	if (taginfo.append) k+=taginfo.append;
+	if (!tags[k]) tags[k]={ _count:0};
+	tags[k]._count++;
+
+	if (taginfo.newslot && this.sentence) {
+		if (taginfo.closetag) {
+			if (taginfo.savehead ||taginfo.saveheadkey) {
+				var k=taginfo.tagname;
+				if (!tags[k]) tags[k]={};
+				
+				var p=this.sentence.indexOf('>');
+				var headline=this.sentence.substring(p+1);
+				if (taginfo.saveheadkey)  {
+					var H=tags[k][taginfo.saveheadkey];
+					if (!H) {
+						H=tags[k][taginfo.saveheadkey]={ slot:[],ntag :[],head:[] };
+						if (!this.tagattributeslots) this.tagattributeslots=[];
+						this.tagattributeslots.push(H);
+					}
+
+					var slot=this.totalsentencecount + this.sentences.length;
+					H.ntag.push( (tags[k]._count-2) /2 );
+					H._slot.push( slot );
+					H._head.push(headline);
+					//console.log(slot,this.tags[k].count,headline)
+					taginfo.saveheadkey='';
+				} else {
+					if (typeof tags[k]._head=='undefined') tags[k]._head=[];
+					tags[k]._head.push(headline);
+				}
+			}
+			this.sentence+=taginfo.tag;
+			hidetag=true; //remove closetag as already put into sentence
+		}
+		this.onsentence.call(this);
+	}
+
+	if (taginfo.savepos && taginfo.opentag) {
+		if (!tags[k]._slot) tags[k]._slot=[];
+		if (!tags[k]._offset) tags[k]._offset=[];
+		tags[k]._slot.push(this.totalsentencecount + this.sentences.length);
+		tags[k]._offset.push(offset);
+	}
+
+	if (taginfo.indexattributes && taginfo.opentag) for (var i in taginfo.indexattributes) {
+		var attrkey=i+'=';
+		if (!tags[k][attrkey]) tags[k][attrkey]={};
+		var val=taginfo.tag.match( taginfo.indexattributes[i].regex);		
+		if (val) {
+			if (val.length>1) val=val[1]; else val=val[0];
+			var depth=taginfo.indexattributes[i].depth || 1;
+			//console.log(attrkey,val,this.tags[k][attrkey],depth)
+			iddepth2tree(tags[k][attrkey], val, tags[k]._slot.length -1,  depth, taginfo.indexattributes[i] , taginfo.tagname);
+			if (taginfo.indexattributes[i].savehead) {
+				taginfo.saveheadkey=attrkey+val;
+			}
+		} else if (!taginfo.indexattributes[i].allowempty) {
+			throw 'empty val '+taginfo.tag
+		} 
+
+		if (taginfo.indexattributes[i].saveval) {
+			if (!tags[k][i]) tags[k][i]=[];
+			if (!val) val="";
+			tags[k][i].push(val);
+		}
+	}
+
+	if (hidetag||taginfo.comment|| taginfo.remove) return '' ;else return taginfo.tag;	
+}
+var taghandlers = {
+	pb: function(taginfo,offset) {
+		if (taginfo.closetag && !taginfo.opentag) return;
+		var k=taginfo.tagname;
+		var ed=taginfo.tag.match(/ ed="(.*?)"/);
+		if (ed) {	
+			ed=ed[1]; 
+			taginfo.append="."+ed; //with edition
+		}
+		//if (typeof taginfo.remove =='undefined') taginfo.remove=true;
+	}
+}
+var setcustomfunc=function(funcs) {
+	this.customfunc=funcs;
+}
+var setschema=function(schema) {
+	this.options.schema=schema;
+	for (var i in this.options.schema) {
+		var h=this.options.schema[i].handler;
+		if (typeof h == 'string') {
+			this.options.schema[i].handler=taghandlers[h];
+		}
+	}	
+}
+
+
+var packcustomfunc=function() {
 	var customfunc={};
-	for (var i in session.customfunc) {
+	for (var i in this.customfunc) {
 	//function name is removed after toString()
 	//need to add return in the beginning for 
 	// new Function() in dmload of yadm.js to work properly
-		customfunc[i]='return '+session.customfunc[i].toString();
+		customfunc[i]='return '+this.customfunc[i].toString();
 	}
 	return customfunc;
 }
 
-var packmeta=function(session) {
-	var meta=session.meta;
+var packmeta=function(context,output) {
+	var meta=output.meta;
 	meta.builddatetime=(new Date()).toString();
-	meta.slotcount=session.slotcount;
+	meta.slotcount=context.slotcount;
 	meta.version=0x20130615;
 	return meta;
 }
-var finalize=function(session) {
-	Yadmworker.finalize(session);
-	//console.log('f',session.status.userbreak);
-	if (session.status.userbreak) {
-		log(session.status,'user break, not finalizing');
-		return;
+var finalize=function() {
+
+	for (var i in this.output.tags) {
+		tagsentence2slot(this.output.tags[i], this.context.sentence2slot);
 	}
-	log(session.status,'finalizing');
+	for (var i in this.context.tagattributeslots) tagsentence2slot(this.context.tagattributeslots[i], this.context.sentence2slot);
+	this.context.sentence2slot=null;	
 
-	console.timeEnd('scanfile');
-	console.time('inverted index');
-	inverted=session.invert.postings;
-	
-	if (session.customfunc.processinverted) {
-		//log(session.status,'process invert');
-		inverted=session.customfunc.processinverted(inverted);
-	}
-	//console.log( JSON.stringify(inverted,'',' '));
-	console.timeEnd('inverted index');
-	
-	var meta=packmeta(session);
-	yadb3.save(meta,'meta',{integerEncoding:'variable'});
-	yadb3.save(packcustomfunc(session),'customfunc'); 
-	console.log('\nWriting...')
-	console.log('meta',yadb3.currentsize());
-
-	console.time('writing');
-	yadb3.save(session.slottexts,'texts');
-	//console.log(session.slottexts)
-	console.log('texts',yadb3.currentsize());
-	yadb3.save(inverted,'postings',{integerEncoding:'delta'});
-	console.log('postings',yadb3.currentsize());
-	//console.log(JSON.stringify(session.tags))
-	yadb3.save(session.tags,'tags',{integerEncoding:'variable'});
-	console.log('tags',yadb3.currentsize());
-	/*
-	yadb3.save(session.crlf,'crlf',{integerEncoding:'delta'});
-	console.log('crlf',yadb3.currentsize());
-	console.log(session.crlf)
-	yadb3.save(session.crlfoffset,'crlfoffset',{integerEncoding:'variable'});
-	console.log('crlfoffset',yadb3.currentsize());
-	yadb3.save(session.crlfstart,'crlfstart',{integerEncoding:'delta'});
-	console.log('crlfstart',yadb3.currentsize());
-	*/
-	yadb3.free();
-
-	session.response.outputfilename=session.request.outputfilename;
-	session.response.slotcount=session.slotcount;
-	session.response.extraslot=session.extraslot;
-	//session.response.outputfilesize=fs.statSync(session.response.outputfilename).size;
-	console.timeEnd('writing');
+	this.finalized=true;
 }
+var debug=false;
+var save=function(filename,opts) {
+	opts=opts||{};
+	var ydb=new Yadb.create(filename,opts);
+	if (!this.finalized) finalize();
+	var strencoding=opts.encoding||'utf8';
+	ydb.stringEncoding(strencoding);
+	
+	if (debug) console.time('save file');
+	packmeta(this.context,this.output);
+	this.output.customfunc=packcustomfunc();
 
-//export the job handler
-exports.initialize=initialize;
-exports.processfile=processfile;
-exports.finalize=finalize;
+	if (this.customfunc.processinverted) {
+		this.output.inverted=this.customfunc.processinverted(this.output.inverted);
+	}
+	ydb.save(this.output);
+	ydb.free();
+	if (debug) console.timeEnd('save file');
+}
+var Create=function() {
+	this.addfilebuffer=addfilebuffer;
+	this.context={};//default index options
+	this.output={tags:{}};
+	this.options={splitter:splitter };
+	this.setschema=setschema;
+	this.setcustomfunc=setcustomfunc;
+	this.construct=construct;
+	this.save=save;
+
+	initialize(this.options,this.context,this.output);
+
+	this.setschema(schema["TEI"]);
+	this.setcustomfunc(require('./yasecustom'))
+	return this;
+}
+module.exports=Create;

@@ -1,31 +1,22 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
-    Yasew=require('../Yasew');
+    Yasew=require('../yasew');
+    Yasebuild=require('../yasebuild')
 var xmlfile='test.xml';
-var schema=require('../schema');
 var fs=require('fs')
-var splitter=require('../splitter');
-var Invert=require('../invert');
-
-
-var taginfo={
-	's':{remove:true},
-	'chapter':{savepos:true,newslot:true, text:true},
-	'pb':{savepos:true,handler:'pb',remove:true, indexattributes:{ n: {regex: / n="(.*?)"/, allowrepeat: false, depth:2}  } }
-}
 
 vows.describe('yadb worker 4 test suite').addBatch({
-  'indexer':{
+  'yasew':{
         topic: function () {
         		var yasew=new Yasew();
 		//indexer.setschema(schema["TEI"]);
         		//indexer.setcustomfunc( require('../yasecustom') );
 		yasew.addfilebuffer(fs.readFileSync(xmlfile,'utf8'));
-		yasew.build();
+		yasew.construct();
 		return yasew;
 	},
 	build:function(topic) {
-		console.log(topic.output);
+		//console.log(topic.output);
 		//assert.deepEqual(topic.tags['pb.a']['n='],{ '1': { '1a': 0, '1b': 1 ,'2a':2} },'id tree')
 	},
 	write:function(topic) {
@@ -33,8 +24,18 @@ vows.describe('yadb worker 4 test suite').addBatch({
 	}
 
 },
-  'read_newly_generated':{
+  'buildscript':{
+        topic: function () {
+        		return Yasebuild({
+        			input:'test.lst',
+        			ydbfn:'test3.ydb'
+        		}
+        		);
+        },
+        check:function(topic) {
+        	console.log('check',topic)
+        }
 
-  	}
+  }
 
 }).export(module); // Export the Suite

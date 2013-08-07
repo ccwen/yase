@@ -62,4 +62,4 @@ var create=function(opts) {
 	handle.splitter=opts.splitter;
 	return handle;
 }
-module.exports={create:create};
+module.exports=create;
