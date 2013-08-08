@@ -4,15 +4,15 @@
 var Yasew=require('./yasew');
 var Schema=require('./schema');
 var fs=require('fs');
-var getfiles=function( filelist , max) {
+var getfiles=function( filelist , maxfile) {
 	var files=fs.readFileSync(filelist,'utf8').replace(/\r\n/g,'\n').split('\n');
 	var output=[];
-	var max=max||0;
+	var maxfile=maxfile||0;
 	for (var i=0;i<files.length;i++) {
 		if (!files[i].trim()) continue;
 		if (files[i].charAt(0)==';') continue;
 		output.push(files[i]);
-		if (max && output.length>=max) break;
+		if (maxfile && output.length>=maxfile) break;
 	}
 	return output;
 }
@@ -23,11 +23,12 @@ module.exports=function( config ) {
 		return;
 	}
 	var files=[];
-	if (config.input.substring(config.input.length-4)=='.lst') files=getfiles(config.input);
+	if (config.input.substring(config.input.length-4)=='.lst') files=getfiles(config.input,config.maxfile);
 	else files=[config.input];
-	
-        	var ydb=new Yasew();
-        	config.schema=config.schema||"TEI";
+
+        	var ydb=new Yasew(config);
+        	config.schema=config.schema || "TEI";
+        	
         	config.encoding=config.encoding||"utf8";
         	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
 	if (typeof config.schema=='string') {

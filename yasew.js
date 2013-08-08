@@ -61,7 +61,8 @@ var parse = function(buffer) {
 				context.sentence+=t;
 				t=buffer[++i];
 			}
-			context.onsentence.call(context);
+		
+			context.onsentence(context);
 		} else if (t=='<') {
 			var tag='';
 			while (i<buffer.length) {
@@ -72,8 +73,7 @@ var parse = function(buffer) {
 			context.sentence+=opts.ontag.apply(context, [tag]);
 			no working as expected , because context.sentence is changed in ontag handler
 			*/
-			var ti=this.options.schema[tag];
-			var r=context.ontag.apply(this, [tag, ti]);
+			var r=context.ontag.apply(this, [tag, this.options.schema]);
 			context.sentence+=r;
 		} else {
 			if (!context.hidetext) {
@@ -82,7 +82,7 @@ var parse = function(buffer) {
 			i++;
 		}
 	}
-	if (context.sentence) context.onsentence.call(context);
+	if (context.sentence) context.onsentence(context);
 
 }
 var extracttagname=function(xml) {
@@ -92,15 +92,16 @@ var extracttagname=function(xml) {
 	return tagname;
 }
 
-var onsentence=function() {
-	this.sentences.push(this.sentence);
+var onsentence=function(context) {
+	context.sentences.push(context.sentence);
 	//console.log(this.sentences.length,this.sentence);
-	this.sentence='';
+	context.sentence='';
 }
 	
-var ontag=function(tag, ti) {
+var ontag=function(tag, schema) {
 	context=this.context;
 	var tagname=extracttagname(tag);
+	ti=schema[tagname];
 	if (!ti) ti={};
 	ti.tagname=tagname;
 	ti.opentag=true;
@@ -150,11 +151,14 @@ var addslot=function(tokencount,sentence) {
 /* convert tags sentence number to slot number */
 var tagsentence2slot=function(tags, mapping){
 	if (!tags._slot) return; //some tag has no slot field
+//	console.log('slotlength',tags._slot.length,mapping)
 	for (var j=0;j<tags._slot.length;j++ ) {
+//		console.log(tags._slot[j], mapping[ tags._slot[j] ])
 		tags._slot[j]= mapping[ tags._slot[j] ];
 	}
 }
 var initialize=function(options,context,output) {
+	context.starttime=new Date();
 	options.slotperbatch=options.slotperbatch||256;
 	options.blockshift=options.blockshift||6;
 	output.meta=output.meta||{};
@@ -231,24 +235,24 @@ var defaulttaghandler=function(taginfo,offset) {
 	if (taginfo.append) k+=taginfo.append;
 	if (!tags[k]) tags[k]={ _count:0};
 	tags[k]._count++;
-
-	if (taginfo.newslot && this.sentence) {
+	
+	if (taginfo.newslot && this.context.sentence) {
 		if (taginfo.closetag) {
 			if (taginfo.savehead ||taginfo.saveheadkey) {
 				var k=taginfo.tagname;
 				if (!tags[k]) tags[k]={};
 				
-				var p=this.sentence.indexOf('>');
-				var headline=this.sentence.substring(p+1);
+				var p=this.context.sentence.indexOf('>');
+				var headline=this.context.sentence.substring(p+1);
 				if (taginfo.saveheadkey)  {
 					var H=tags[k][taginfo.saveheadkey];
 					if (!H) {
 						H=tags[k][taginfo.saveheadkey]={ slot:[],ntag :[],head:[] };
-						if (!this.tagattributeslots) this.tagattributeslots=[];
-						this.tagattributeslots.push(H);
+						if (!this.context.tagattributeslots) this.context.tagattributeslots=[];
+						this.context.tagattributeslots.push(H);
 					}
 
-					var slot=this.totalsentencecount + this.sentences.length;
+					var slot=this.context.totalsentencecount + this.context.sentences.length;
 					H.ntag.push( (tags[k]._count-2) /2 );
 					H._slot.push( slot );
 					H._head.push(headline);
@@ -259,16 +263,16 @@ var defaulttaghandler=function(taginfo,offset) {
 					tags[k]._head.push(headline);
 				}
 			}
-			this.sentence+=taginfo.tag;
+			this.context.sentence+=taginfo.tag;
 			hidetag=true; //remove closetag as already put into sentence
 		}
-		this.onsentence.call(this);
+		this.context.onsentence(this.context);
 	}
 
 	if (taginfo.savepos && taginfo.opentag) {
 		if (!tags[k]._slot) tags[k]._slot=[];
 		if (!tags[k]._offset) tags[k]._offset=[];
-		tags[k]._slot.push(this.totalsentencecount + this.sentences.length);
+		tags[k]._slot.push(this.context.totalsentencecount + this.context.sentences.length);
 		tags[k]._offset.push(offset);
 	}
 
@@ -334,55 +338,68 @@ var packcustomfunc=function() {
 	return customfunc;
 }
 
-var packmeta=function(context,output) {
+var packmeta=function(options,context,output) {
 	var meta=output.meta;
+	if (options.dbid) meta.dbid=options.dbid;
+	if (options.author) meta.author=options.author;
+	if (options.website) meta.website=options.website;
+	if (options.minyaseversion) meta.minversion=options.minyaseversion;
 	meta.builddatetime=(new Date()).toString();
+	meta.buildduration=new Date()-context.starttime;
 	meta.slotcount=context.slotcount;
-	meta.version=0x20130615;
+	meta.slotperbatch=options.slotperbatch;
+	meta.blockshift=options.blockshift;
+	meta.version=options.version || '0.0.0';
+	
+	meta.tags=Object.keys(output.tags);
+	meta.schema=JSON.stringify(options.schema);
+	//TODO , support boolean type
 	return meta;
 }
 var finalize=function() {
-
+	if (this.finalized) {
+		console.warn('already finalized')
+		return;
+	}
 	for (var i in this.output.tags) {
 		tagsentence2slot(this.output.tags[i], this.context.sentence2slot);
 	}
 	for (var i in this.context.tagattributeslots) tagsentence2slot(this.context.tagattributeslots[i], this.context.sentence2slot);
-	this.context.sentence2slot=null;	
-
+	this.context.sentence2slot=[];	
 	this.finalized=true;
 }
 var debug=false;
 var save=function(filename,opts) {
 	opts=opts||{};
 	var ydb=new Yadb.create(filename,opts);
-	if (!this.finalized) finalize();
+	if (!this.finalized) finalize.apply(this);
 	var strencoding=opts.encoding||'utf8';
 	ydb.stringEncoding(strencoding);
 	
 	if (debug) console.time('save file');
-	packmeta(this.context,this.output);
+	
 	this.output.customfunc=packcustomfunc();
 
 	if (this.customfunc.processinverted) {
 		this.output.inverted=this.customfunc.processinverted(this.output.inverted);
 	}
+	packmeta(this.options,this.context,this.output);
 	ydb.save(this.output);
 	ydb.free();
 	if (debug) console.timeEnd('save file');
 }
-var Create=function() {
+var Create=function(options) {
 	this.addfilebuffer=addfilebuffer;
 	this.context={};//default index options
 	this.output={tags:{}};
-	this.options={splitter:splitter };
+	this.options=options || {};
+	if (!this.options.splitter) this.options.splitter=splitter;
 	this.setschema=setschema;
 	this.setcustomfunc=setcustomfunc;
 	this.construct=construct;
 	this.save=save;
 
 	initialize(this.options,this.context,this.output);
-
-	this.setschema(schema["TEI"]);
 	this.setcustomfunc(require('./yasecustom'))
 	return this;
 }

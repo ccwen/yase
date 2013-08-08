@@ -1,7 +1,8 @@
 ﻿/*YASE entry */
-var Yase=require('./yase');
+var yase=require('./yase'); // do not invoke with new 
 var Yasew=require('./yasew');
 var Yasebuild=require('./yasebuild');
 var customfunc=require('./yasecustom');
+var api=require('./yase_api');
 var schema=require('./schema');
-module.exports={open:Yase, create: Yasew, build: Yasebuild,customfunc:customfunc, schema:schema};
+module.exports={use:yase, create: Yasew, build: Yasebuild,customfunc:customfunc, schema:schema, api: api};

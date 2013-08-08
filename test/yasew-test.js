@@ -1,5 +1,6 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
+    schema=require('../schema');
     Yasew=require('../yasew');
     Yasebuild=require('../yasebuild')
 var xmlfile='test.xml';
@@ -9,10 +10,11 @@ vows.describe('yadb worker 4 test suite').addBatch({
   'yasew':{
         topic: function () {
         		var yasew=new Yasew();
-		//indexer.setschema(schema["TEI"]);
-        		//indexer.setcustomfunc( require('../yasecustom') );
+		yasew.setschema(schema["TEI"]);
+        		//yasew.setcustomfunc( require('../yasecustom') );
 		yasew.addfilebuffer(fs.readFileSync(xmlfile,'utf8'));
 		yasew.construct();
+
 		return yasew;
 	},
 	build:function(topic) {

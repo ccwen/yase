@@ -4,7 +4,6 @@ Ksana Search Engine
 yadb for supporting full text search
 */
 
-var Yadb=require('yadb');
 var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
 
@@ -307,34 +306,6 @@ var genToc=function(toctree,opts) {
 	output.sort( function(a,b) {return a[1]-b[1]});
 	return output;
 }
-/*
-Yadm.prototype.findCrlf=function(nslot) {
-	var db=this.getdb();
-	return this.customfunc.findCrlf(this.getdb(),nslot);
-}
-Yadm.prototype.getCrlfByRange=function(start,end) {
-	return this.customfunc.getCrlfByRange(this.getdb(),start,end);
-}
-var addcrlf=function(ctx,db,start,end,nslot) {
-	if (Object.keys(ctx).length==0) {
-		ctx.crlfcount=0;
-		ctx.startadv=0;
-		ctx.endadv=0;
-		ctx.n=0;
-	}
-	if (!ctx.startcrlf) ctx.startcrlf=db.findCrlf(start.slot);
-	if (!ctx.endcrlf) ctx.endcrlf=db.findCrlf(end.slot+1);
-	if (!ctx.crlf)      ctx.crlf=db.getCrlfByRange(ctx.startcrlf,ctx.endcrlf);
-
-	while (nslot==ctx.crlf.slot[ctx.n] && ctx.n<ctx.crlf.slot.length) {
-		var insert=ctx.crlf.offset[ctx.n]+ctx.crlfcount;
-		t=t.substr(0,insert)+'\n'+t.substring(insert);
-		if (nslot==start.slot && ctx.crlf.offset[ctx.n]<start.offset) ctx.startadv++;
-		if (nslot==end.slot&&ctx.crlf.offset[ctx.n]<end.offset) ctx.endadv++;
-		ctx.n++;ctx.crlfcount++;
-	}
-}
-*/
 var getToc=function(tagname,seq) {
 	return this.getTag(tagname,seq).head;
 }
@@ -353,43 +324,44 @@ var fetchPage=function(tagname,seq,opts) {
 	return r;
 }
 
-var Yase = function(fn) { 
+var yase_use = function(fn) { 
 	var db = null;
-	var dmload=function(instance) {
-		instance.meta=db.get(['meta'],true);
-		instance.customfunc=db.get(['customfunc'],true);
+	var seload=function(instance) {
+		if (instance.yaseloaded) return;
+		instance.meta=instance.get(['meta'],true);
+		instance.customfunc=instance.get(['customfunc'],true);
 		for (var i in instance.customfunc) {
 			//compile the custom function
 			var r = new Function(instance.customfunc[i])
 			instance.customfunc[i]=r();
 		}
-		
+		//augment interface
+		instance.getToc=getToc;
+		instance.getText=getText;
+		instance.getTag=getTag;
+		instance.findTag=findTag;
+		instance.getTagAttr=getTagAttr;
+		instance.fetchPage=fetchPage;
+		instance.getTextByTag=getTextByTag;
+		instance.phraseSearch=phraseSearch;
+		instance.getPostingById=getPostingById;
+		instance.closestTag=closestTag;
+		instance.genToc=genToc;
+		instance.phrasecache={};
+		instance.phrasecache_raw={};
+		instance.parseSelector=parseSelector;
+		instance.getTextRange=getTextRange;		
+		instance.yaseloaded=true;
 	}
 
 	if (fn) {
-		//console.log(fn);
-		var db = new Yadb.open(fn);	
-		dmload(this);
+		db = require('yadb').api.open(fn); // make use of yadb db pool 
+		sepreload(db);
 	} else throw 'missing filename';
-	
-	this.getdb=function() {return db;}
-	this.getToc=getToc;
-	this.getText=getText;
-	this.getTag=getTag;
-	this.findTag=findTag;
-	this.getTagAttr=getTagAttr;
-	this.fetchPage=fetchPage;
-	this.getTextByTag=getTextByTag;
-	this.phraseSearch=phraseSearch;
-	this.getPostingById=getPostingById;
-	this.closestTag=closestTag;
-	this.genToc=genToc;
-	this.phrasecache={};
-	this.phrasecache_raw={};
-	this.parseSelector=parseSelector;
-	this.getTextRange=getTextRange;
-	return this;
+
+	if (!db) throw 'cannot use db '+fn;		
+	return db;
 }
 
-module.exports=Yase;
-return Yase;
+module.exports=yase_use;
+return yase_use;

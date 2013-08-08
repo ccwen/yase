@@ -1,6 +1,10 @@
 module.exports={
 	"TEI": {
 			'div':{newslot:false,savepos:true,indexattributes:{ id: {regex: / id="(.*?)"/, allowrepeat: true, depth:1}}},
-			'pb':{savepos:true,remove:false,handler:'pb',indexattributes:{ id: {regex: / id="(.*?)"/, allowrepeat: false, depth:2}  } }
+			'pb':{savepos:true,remove:false,handler:'pb',indexattributes:{ n: {regex: / n="(.*?)"/, allowrepeat: false, depth:2}  } }
+	},
+	"Accelon": {
+		'chapter':{newslot:true,savepos:true,savehead:true},		
+		'sutra':{newslot:true,savepos:true,savehead:true},
 	}
 }

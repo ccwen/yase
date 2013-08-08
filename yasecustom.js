@@ -1,7 +1,7 @@
 /*
   these functions will be part of ydb
 */
-var dmversion=function() { return 0x20130702};
+var version=function() { return 0x20130808};
 
 var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
@@ -50,7 +50,6 @@ var findTag=function(db,tagname,attributename,value) {
 	return  tag;
 }
 module.exports={
-	dmversion:dmversion,
 	getText:getText,
 	getTag:getTag,
 	findTag:findTag,
