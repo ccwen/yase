@@ -318,10 +318,15 @@ var setcustomfunc=function(funcs) {
 }
 var setschema=function(schema) {
 	this.options.schema=schema;
-	for (var i in this.options.schema) {
-		var h=this.options.schema[i].handler;
+	for (var i in schema) {
+		var h=schema[i].handler;
 		if (typeof h == 'string') {
-			this.options.schema[i].handler=taghandlers[h];
+			schema[i].handler=taghandlers[h];
+		}
+		for (var j in schema[i]) {
+			if (!schema[i].indexattributes) continue;
+			//convert regstr to regex as json cannot hold regex
+			
 		}
 	}	
 }
