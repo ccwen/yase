@@ -56,6 +56,7 @@ var parse = function(buffer) {
 	var i=0;
 	while (i<buffer.length) {
 		t=buffer[i];
+		if (t=='\n') context.crlfcount++;
 		if (this.customfunc.isBreaker(t)) {
 			while (t&& (this.customfunc.isBreaker(t) || t==' ') && i<buffer.length) {
 				context.sentence+=t;
@@ -76,6 +77,7 @@ var parse = function(buffer) {
 			var r=context.ontag.apply(this, [tag, this.options.schema]);
 			context.sentence+=r;
 		} else {
+
 			if (!context.hidetext) {
 				context.sentence+=t;
 			}
@@ -115,6 +117,18 @@ var ontag=function(tag, schema) {
 		if (ti.opentag) context.hidetext=true;
 		if (ti.closetag) context.hidetext=false;
 	}
+	if (ti.opentag) context.tagstack.push(tagname);
+	if (ti.closetag) {
+		if (context.tagstack.length==0) {
+			console.log('tag underflow, line',context.crlfcount);
+			console.trace();
+		}
+		var tn=context.tagstack.pop();
+		if (tn!=tagname) {
+			console.log('nested tag, line',context.crlfcount);
+			console.trace();
+		}
+	} 
 
 	if (ti.handler) ti.handler.apply(this,[ti, context.sentence.length]);
 	return defaulttaghandler.apply(this,[ti,context.sentence.length]);
@@ -247,7 +261,7 @@ var defaulttaghandler=function(taginfo,offset) {
 				if (taginfo.saveheadkey)  {
 					var H=tags[k][taginfo.saveheadkey];
 					if (!H) {
-						H=tags[k][taginfo.saveheadkey]={ slot:[],ntag :[],head:[] };
+						H=tags[k][taginfo.saveheadkey]={ _slot:[],_ntag :[],_head:[] , _depth:[]};
 						if (!this.context.tagattributeslots) this.context.tagattributeslots=[];
 						this.context.tagattributeslots.push(H);
 					}
@@ -256,6 +270,7 @@ var defaulttaghandler=function(taginfo,offset) {
 					H.ntag.push( (tags[k]._count-2) /2 );
 					H._slot.push( slot );
 					H._head.push(headline);
+					
 					//console.log(slot,this.tags[k].count,headline)
 					taginfo.saveheadkey='';
 				} else {
@@ -272,8 +287,10 @@ var defaulttaghandler=function(taginfo,offset) {
 	if (taginfo.savepos && taginfo.opentag) {
 		if (!tags[k]._slot) tags[k]._slot=[];
 		if (!tags[k]._offset) tags[k]._offset=[];
+		if (!tags[k]._depth) tags[k]._depth=[];
 		tags[k]._slot.push(this.context.totalsentencecount + this.context.sentences.length);
 		tags[k]._offset.push(offset);
+		tags[k]._depth.push(this.context.tagstack.length);
 	}
 
 	if (taginfo.indexattributes && taginfo.opentag) for (var i in taginfo.indexattributes) {
@@ -370,10 +387,21 @@ var finalize=function() {
 		return;
 	}
 	for (var i in this.output.tags) {
+		//convert sentence seq to slot seq in tag._slot
 		tagsentence2slot(this.output.tags[i], this.context.sentence2slot);
+		//compress depth array, replace with number if all in same depth
+		var D=this.output.tags[i]._depth;
+		if (D && D.length>1) {
+			for (var j=1;j<D.length;j++) {
+				if (D[0]!=D[j]) break;
+			}
+			if (j==D.length) this.output.tags[i]._depth=D[0]; //all items have same value
+		} else if (D&& D.length==1) this.output.tags[i]._depth=D[0]; //only one item
 	}
 	for (var i in this.context.tagattributeslots) tagsentence2slot(this.context.tagattributeslots[i], this.context.sentence2slot);
 	this.context.sentence2slot=[];	
+
+	//compress depth array)
 	this.finalized=true;
 }
 var debug=false;
@@ -398,7 +426,7 @@ var save=function(filename,opts) {
 }
 var Create=function(options) {
 	this.addfilebuffer=addfilebuffer;
-	this.context={};//default index options
+	this.context={tagstack:[],crlfcount:0};//default index options
 	this.output={tags:{}};
 	this.options=options || {};
 	if (!this.options.splitter) this.options.splitter=splitter;
