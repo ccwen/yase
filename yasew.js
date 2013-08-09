@@ -324,9 +324,12 @@ var setschema=function(schema) {
 			schema[i].handler=taghandlers[h];
 		}
 		for (var j in schema[i]) {
-			if (!schema[i].indexattributes) continue;
+			var ATTR=schema[i].indexattributes;
+			if (!ATTR) continue;
 			//convert regstr to regex as json cannot hold regex
-			
+			for (var k in ATTR) {
+				if (ATTR[k].regstr) ATTR[k].regex=new RegExp(ATTR[k].regstr)
+			}
 		}
 	}	
 }
