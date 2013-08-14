@@ -3,29 +3,29 @@ var yase=require('./yase');
 var search=require('./search');
 
 var phraseSearch=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var res=se.phraseSearch(opts.tofind,opts);
 	return res;
 };
 
 var gettext=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var res=se.getText(opts.seq || opts.slot || 0 ,opts);
 	return res;
 }
 var gettextbytag=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var res=se.getTextByTag(opts);
 	return res;
 }
 
 var customfunc=function( opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	return se.customfunc[opts.name].apply(se,opts.params);
 }
 
 var fuzzysearch=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	se.phrasecache=se.phrasecache||{};
 	opts.phrasecache=se.phrasecache; 
 	var res=search.fuzzy(se,opts.tofind,opts);
@@ -34,14 +34,14 @@ var fuzzysearch=function(opts) {
 }
 
 var findTag=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var o=opts;
 	if (opts.selector) o=se.parseSelector(opts.selector);
 	var t=se.findTag(o.tag,o.attribute,o.value);
 	return t;
 }
 var getTextRange=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var res=se.getTextRange(opts.start,opts.end,opts);
 	return res;
 }
@@ -63,13 +63,13 @@ var getRaw=function(path) { //path including database name
 	} else {
 		var dbname=path.shift();
 		dbname=dbname.replace(':','/');
-		var se=require('yadb').open(dbname);
+		var se=require('yase').open(dbname);
 		var res=se.get(path);
 	}
 	return res;
 }
 var closestTag=function(opts) {
-	var se=yase.use(opts.db);
+	var se=yase(opts.db);
 	var output=[];
 	var slots=opts.slots; //default is an array
 	//console.time('closestTag')
@@ -97,7 +97,7 @@ var closestTag=function(opts) {
 	return output;
 }
 var installservice=function(services) { // so that it is possible to call other services
-	yadb_api(services);
+	//yase_api(services);
 	services['yase']={ 
 	getText:gettext,
 	getTextByTag:gettextbytag,
@@ -107,7 +107,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	closestTag:closestTag,
 	findTag:findTag,
 	getRaw:getRaw,
-	initialize:initialize
+	//initialize:initialize
 	};
 	
 }

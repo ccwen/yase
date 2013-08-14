@@ -14,7 +14,7 @@ var getPostingById=function(id) {
 		var idarr=[id];
 	}
 	idarr.unshift('postings');
-	var r=this.getdb().get(idarr);
+	var r=this.get(idarr,true);
 	return r;
 }
 var highlight=function(opts) {
@@ -38,8 +38,8 @@ var highlight=function(opts) {
 				till++;
 			}
 
-			output+= opts.text.substring(now,off[i-1+till]+1);
-			last=off[i-1+till]+1;
+			output+= opts.text.substring(now,off[i-1+till]);
+			last=off[i-1+till];
 
 			output+='</hl>';
 			j++;
@@ -108,8 +108,8 @@ var highlightresult=function(dm,R,phraselength) {
 var profile=false;
 var phraseSearch=function(tofind,opts) {
 	var splitter=this.customfunc.splitter;
+	if (!splitter) throw 'no splitter';
 	var postings=[];
-	opts=opts||{ungroup:true};
 	var splitted=splitter(tofind);
 	var tokens=splitted.tokens;
 	var skips=splitted.skips;
@@ -157,8 +157,8 @@ var phraseSearch=function(tofind,opts) {
 		}
 		g=o;
 	}
-
-	if (opts.raw) return g;
+	if (opts.raw) return raw;
+	if (opts.grouped) return g;
 	if (profile) console.time('highlight')
 	var R="";
 	if (opts.showtext) {
@@ -326,7 +326,7 @@ var fetchPage=function(tagname,seq,opts) {
 
 var yase_use = function(fn) { 
 	var db = null;
-	var seload=function(instance) {
+	var se_preload=function(instance) {
 		if (instance.yaseloaded) return;
 		instance.meta=instance.get(['meta'],true);
 		instance.customfunc=instance.get(['customfunc'],true);
@@ -352,11 +352,12 @@ var yase_use = function(fn) {
 		instance.parseSelector=parseSelector;
 		instance.getTextRange=getTextRange;		
 		instance.yaseloaded=true;
+		instance.getdb=function() {return db};
 	}
 
 	if (fn) {
-		db = require('yadb').api.open(fn); // make use of yadb db pool 
-		sepreload(db);
+		db = require('yadb').api().open(fn); // make use of yadb db pool 
+		se_preload(db);
 	} else throw 'missing filename';
 
 	if (!db) throw 'cannot use db '+fn;		

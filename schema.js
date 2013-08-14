@@ -4,7 +4,7 @@ module.exports={
 			'pb':{savepos:true,remove:false,handler:'pb',indexattributes:{ n: {regstr: ' n="(.*?)"', allowrepeat: false, depth:2}  } }
 	},
 	"Accelon": {
-		'chapter':{newslot:true,savepos:true,savehead:true,indexattributes:{ n: {regstr: ' n="(.*?)"'}}},		
+		'chapter':{newslot:true,savepos:true,savehead:true,indexattributes:{ n: {regstr: ' n="(.*?)"', depth:2}}},		
 		'sutra':{newslot:true,savepos:true,savehead:true},
 	}
 }

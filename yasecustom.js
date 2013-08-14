@@ -7,6 +7,7 @@ var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
 	return  ( c==0xf0d || c==0x3002 ||  c==0xff1b || ch=='.' || ch==';'|| ch=='|') ;
 }
+
 var getText=function(db,seq,opts) {
 	if (!opts) opts={};
 	var slotperbatch=db.get(['meta','slotperbatch']);
@@ -55,6 +56,7 @@ module.exports={
 	findTag:findTag,
 	getTagAttr:getTagAttr,
 	isBreaker:isBreaker,
+	splitter:require('./splitter'),
 	//getCrlf:getCrlf,
 	//getCrlfByRange:getCrlfByRange,
 	//findCrlf:findCrlf

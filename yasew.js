@@ -353,6 +353,7 @@ var setschema=function(schema) {
 
 
 var packcustomfunc=function() {
+	if (!this.customfunc) throw 'no customfunc';
 	var customfunc={};
 	for (var i in this.customfunc) {
 	//function name is removed after toString()
@@ -379,6 +380,7 @@ var packmeta=function(options,context,output) {
 	meta.tags=Object.keys(output.tags);
 	meta.schema=JSON.stringify(options.schema);
 	//TODO , support boolean type
+
 	return meta;
 }
 var finalize=function() {
@@ -408,13 +410,14 @@ var debug=false;
 var save=function(filename,opts) {
 	opts=opts||{};
 	var ydb=new Yadb.create(filename,opts);
-	if (!this.finalized) finalize.apply(this);
+	if (!this.finalized) finalize.call(this);
 	var strencoding=opts.encoding||'utf8';
 	ydb.stringEncoding(strencoding);
 	
 	if (debug) console.time('save file');
 	
-	this.output.customfunc=packcustomfunc();
+	this.output.customfunc=packcustomfunc.call(this);
+	//console.log(this.output.customfunc)
 
 	if (this.customfunc.processinverted) {
 		this.output.inverted=this.customfunc.processinverted(this.output.inverted);
