@@ -8,11 +8,26 @@ var phraseSearch=function(opts) {
 	return res;
 };
 
-var gettext=function(opts) {
+var getText=function(opts) {
 	var se=yase(opts.db);
 	var res=se.getText(opts.seq || opts.slot || 0 ,opts);
 	return res;
 }
+var fillText=function(opts) {
+	var se=yase(opts.db);
+	var output={};
+	for (var i in opts.slots) {
+		if (opts.slots[i]>=se.meta.slotcount) break;
+		output[opts.slots[i]] = se.getText( opts.slots[i],opts);
+	}
+	return output;
+}
+var getRange=function(opts) {
+	var se=yase(opts.db);
+	var res=se.getRange(opts.start,opts.end,opts);
+	return res;
+}
+
 var gettextbytag=function(opts) {
 	var se=yase(opts.db);
 	var res=se.getTextByTag(opts);
@@ -99,7 +114,9 @@ var closestTag=function(opts) {
 var installservice=function(services) { // so that it is possible to call other services
 	//yase_api(services);
 	services['yase']={ 
-	getText:gettext,
+	getText:getText,
+	fillText:fillText,
+	getRange:getRange,
 	getTextByTag:gettextbytag,
 	getTextRange:getTextRange,
 	customfunc:customfunc,

@@ -171,9 +171,7 @@ var getKeys=function(id) {
 	throw 'not implemented'
 }
 //return range of id given start and end
-var getRange=function(start,end,opts) {
-	throw 'not implemented'
-}
+
 var getText=function(slot,opts) {
 	if (opts && opts.tofind) {
 	 	//console.log('text with tofind',opts.tofind);
@@ -212,6 +210,14 @@ var getText=function(slot,opts) {
 	 }
 }
 
+var getRange=function(start,end,opts) {
+	var output={};
+	for (var i=start;i<end;i++) {
+		if (i>=this.meta.slotcount) break;
+		output[i] = getText.apply(this,[i,opts]);
+	}
+	return output;
+}
 var parseSelector=function(sel) {  // tag[attr=value]
 		var m=sel.match(/(.*?)\[(.*?)=(.*?)\]/);
 		if (m) return {tag:m[1],attribute:m[2],value:m[3]};
@@ -351,6 +357,8 @@ var yase_use = function(fn) {
 		instance.phrasecache_raw={};
 		instance.parseSelector=parseSelector;
 		instance.getTextRange=getTextRange;		
+		instance.getRange=getRange;	
+
 		instance.yaseloaded=true;
 		instance.getdb=function() {return db};
 	}

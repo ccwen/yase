@@ -31,6 +31,7 @@ module.exports=function( config ) {
         	
         	config.encoding=config.encoding||"utf8";
         	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
+        	if (config.moveupdir) config.output='../'+config.output;
         	if (typeof config.schema=='function') {
         		var s=new require('yase').Genschema();
         		config.schema.call(s);
