@@ -31,6 +31,11 @@ module.exports=function( config ) {
         	
         	config.encoding=config.encoding||"utf8";
         	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
+        	if (typeof config.schema=='function') {
+        		var s=new require('yase').Genschema();
+        		config.schema.call(s);
+        		config.schema=s.get();
+        	}
 	if (typeof config.schema=='string') {
 		stock=Schema[config.schema];
 		if (!stock) {
@@ -38,13 +43,14 @@ module.exports=function( config ) {
 			return;
 		}
 		ydb.setschema(stock);//stock schema
-	} else ydb.setschema(config.schema)
+	} else if (typeof config.schema=='object') ydb.setschema(config.schema);
+	else throw 'no schema';
 	
 	if (config.customfunc) ydb.setcustomfunc( config.customfunc );	
 	else  			ydb.setcustomfunc( require('./yasecustom') );
 
         	for (var i in files) {
-        		ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding));
+        		ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
         		ydb.construct();	
         	}
 	

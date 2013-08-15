@@ -43,7 +43,12 @@ var splitter=require('./splitter');
 var Invert=require('./invert');
 var schema=require('./schema');
 var Yadb=require('yadb');
-
+var taghandlers=require('./taghandlers');
+var abortbuilding=function(message) {
+	console.log('FILE:',context.filename)
+	console.log('LINE:',context.crlfcount+1)
+	throw message;
+}
 var parse = function(buffer) {
 	context=this.context;
 	buffer=buffer.replace(/\r\n/g,'\n');
@@ -74,7 +79,7 @@ var parse = function(buffer) {
 			context.sentence+=opts.ontag.apply(context, [tag]);
 			no working as expected , because context.sentence is changed in ontag handler
 			*/
-			var r=context.ontag.apply(this, [tag, this.options.schema]);
+			var r=context.ontag.apply(this, [tag, this.context.schema]);
 			context.sentence+=r;
 		} else {
 
@@ -113,6 +118,9 @@ var ontag=function(tag, schema) {
 	if (tag.substr(tag.length-2,1)=='/') ti.closetag=true;
 	if (tag.substr(1,1)=='/') {ti.closetag=true; ti.opentag=false;}
 
+	if (ti.emptytag) {
+		if (!ti.closetag || !ti.opentag) abortbuilding('invalid empty tag, schema:'+JSON.stringify(ti));
+	}
 	if (ti.comment) {
 		if (ti.opentag) context.hidetext=true;
 		if (ti.closetag) context.hidetext=false;
@@ -135,9 +143,13 @@ var ontag=function(tag, schema) {
 }
 
 
-var addfilebuffer=function(filebuffer) {
+var addfilebuffer=function(filebuffer,filename) {
 	var context=this.context;
+
 	context.sentences=[];	
+	context.filename=filename;
+	context.totalcrlfcount+=context.crlfcount;
+	context.crlfcount=0;
 	parse.apply(this,[filebuffer]);
 	context.totalsentencecount+=context.sentences.length;
 }
@@ -189,9 +201,6 @@ var initialize=function(options,context,output) {
 
 
 	if (typeof output.tags=='undefined') output.tags={};
-	if (typeof context.totalsentencecount=='undefined') {
-		context.totalsentencecount=0;
-	}
 
 
 }
@@ -221,7 +230,7 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 		}
 	}
 	if (idarr.length>depth) {
-		throw 'id depth exceed';
+		abortbuilding('id depth exceed');
 		return;
 	}
 	while (idarr.length<depth) idarr.push('0');
@@ -306,7 +315,7 @@ var defaulttaghandler=function(taginfo,offset) {
 				taginfo.saveheadkey=attrkey+val;
 			}
 		} else if (!taginfo.indexattributes[i].allowempty) {
-			throw 'empty val '+taginfo.tag
+			abortbuilding('empty val '+taginfo.tag);
 		} 
 
 		if (taginfo.indexattributes[i].saveval) {
@@ -318,30 +327,20 @@ var defaulttaghandler=function(taginfo,offset) {
 
 	if (hidetag||taginfo.comment|| taginfo.remove) return '' ;else return taginfo.tag;	
 }
-var taghandlers = {
-	pb: function(taginfo,offset) {
-		if (taginfo.closetag && !taginfo.opentag) return;
-		var k=taginfo.tagname;
-		var ed=taginfo.tag.match(/ ed="(.*?)"/);
-		if (ed) {	
-			ed=ed[1]; 
-			taginfo.append="."+ed; //with edition
-		}
-		//if (typeof taginfo.remove =='undefined') taginfo.remove=true;
-	}
-}
+
 var setcustomfunc=function(funcs) {
 	this.customfunc=funcs;
 }
 var setschema=function(schema) {
 	this.options.schema=schema;
-	for (var i in schema) {
-		var h=schema[i].handler;
+	this.context.schema=JSON.parse(JSON.stringify(schema));
+	for (var i in this.context.schema) {
+		var h=this.context.schema[i].handler;
 		if (typeof h == 'string') {
-			schema[i].handler=taghandlers[h];
+			this.context.schema[i].handler=taghandlers[h];
 		}
-		for (var j in schema[i]) {
-			var ATTR=schema[i].indexattributes;
+		for (var j in this.context.schema[i]) {
+			var ATTR=this.context.schema[i].indexattributes;
 			if (!ATTR) continue;
 			//convert regstr to regex as json cannot hold regex
 			for (var k in ATTR) {
@@ -353,7 +352,7 @@ var setschema=function(schema) {
 
 
 var packcustomfunc=function() {
-	if (!this.customfunc) throw 'no customfunc';
+	if (!this.customfunc) abortbuidling('no customfunc');
 	var customfunc={};
 	for (var i in this.customfunc) {
 	//function name is removed after toString()
@@ -402,7 +401,7 @@ var finalize=function() {
 	}
 	for (var i in this.context.tagattributeslots) tagsentence2slot(this.context.tagattributeslots[i], this.context.sentence2slot);
 	this.context.sentence2slot=[];	
-
+	context.totalcrlfcount+=context.crlfcount;
 	//compress depth array)
 	this.finalized=true;
 }
@@ -429,7 +428,7 @@ var save=function(filename,opts) {
 }
 var Create=function(options) {
 	this.addfilebuffer=addfilebuffer;
-	this.context={tagstack:[],crlfcount:0};//default index options
+	this.context={tagstack:[],crlfcount:0,totalcrlfcount:0,totalsentencecount:0};//default index options
 	this.output={tags:{}};
 	this.options=options || {};
 	if (!this.options.splitter) this.options.splitter=splitter;
