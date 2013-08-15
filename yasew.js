@@ -128,13 +128,11 @@ var ontag=function(tag, schema) {
 	if (ti.opentag) context.tagstack.push(tagname);
 	if (ti.closetag) {
 		if (context.tagstack.length==0) {
-			console.log('tag underflow, line',context.crlfcount);
-			console.trace();
+			abortbuilding('tag underflow');
 		}
 		var tn=context.tagstack.pop();
 		if (tn!=tagname) {
-			console.log('nested tag, line',context.crlfcount);
-			console.trace();
+			abortbuilding('nested tag');
 		}
 	} 
 

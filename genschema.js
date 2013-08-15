@@ -34,7 +34,6 @@ Genschema=function() {
 		return this;
 	}
 	this.get=function() {
-		console.log(JSON.stringify(this.schema))
 		return this.schema ;
 	}
 	return this;
