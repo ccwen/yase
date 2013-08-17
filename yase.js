@@ -219,8 +219,11 @@ var getRange=function(start,end,opts) {
 	return output;
 }
 var parseSelector=function(sel) {  // tag[attr=value]
-		var m=sel.match(/(.*?)\[(.*?)=(.*?)\]/);
-		if (m) return {tag:m[1],attribute:m[2],value:m[3]};
+          var m=tag.match(/(.*?)\[(.*?)=(.*)/);
+          if (!m) return;
+          var tagname=m[1], attributename=m[2],value=m[3];
+          if (value[value.length-1]===']') value=value.substring(0,value.length-1);
+          return {tag:tagname,attribute:attributename,value:value};
 };
 
 var getTextByTag=function(opts) {

@@ -1,11 +1,11 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
-    Yadm4=require('../yadm4');
+    Yase=require('../yase');
 var fs=require('fs')
 vows.describe('yadm 4 test suite').addBatch({
     'texts': {
         topic: function () {
-        		return new Yadm4('../../ltpr/jiangkangyur.ydb');
+        		return new Yase.open('../../ltpr/jiangkangyur.ydb');
 	},
 	gettext:function(topic) {
 		assert.equal(topic.getText(0).trim(),'རྒྱ་གར་སྐད་དུ།','gettext')
@@ -27,7 +27,7 @@ vows.describe('yadm 4 test suite').addBatch({
     },
     'xml texts': {
         topic: function () {
-        		return new Yadm4('../yadm4.ydb');
+        		return new Yase.open('../yase.open.ydb');
 	},
 	getText:function(topic) {
 		assert.equal(topic.getText(0),'<chapter>c1</chapter>','firstline')
