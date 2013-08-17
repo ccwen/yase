@@ -42,13 +42,26 @@ var getTagAttr=function(db,tagname,ntag,attributename) {
 var findTag=function(db,tagname,attributename,value) {
 	var par=['tags',tagname,attributename+'='].concat(value.split('.'));
 	var tag={};
-	tag.ntag=db.get(par);
+	tag.ntag=db.get(par,true);
+	if (typeof tag.ntag=='number') {
+		tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
+		tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
+		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
+		tag.text=db.getText(tag.slot);
+		return tag;
+	}
+	var out=[],tags=JSON.parse(JSON.stringify(tag.ntag));
 
-	tag.slot= db.get(['tags',tagname,'slot',tag.ntag]);
-	tag.offset= db.get(['tags',tagname,'offset',tag.ntag]);
-	tag.head= db.get(['tags',tagname,'head',tag.ntag]);	
-
-	return  tag;
+	for (var i in tags){
+		var tag={};
+		tag.ntag=tags[i];
+		tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
+		tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
+		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
+		tag.text=db.getText(tag.slot);
+		out.push(tag)
+	}
+	return  out;
 }
 module.exports={
 	getText:getText,

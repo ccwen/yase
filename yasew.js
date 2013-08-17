@@ -237,7 +237,6 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 		obj = obj[ idarr[i]];
 	}
 	var val=idarr[idarr.length-1];
-
 	if (typeof obj[val] !=='undefined') {
 		if (ai.allowrepeat) {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
