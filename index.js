@@ -6,5 +6,6 @@ var customfunc=require('./yasecustom');
 var api=require('./yase_api');
 var schema=require('./schema');
 var Genschema=require('./genschema');
+var version=require('./package.json').version;
 module.exports={use:yase, create: Yasew, build: Yasebuild,
-	customfunc:customfunc, schema:schema, api: api, Genschema: Genschema};
+	customfunc:customfunc, schema:schema, api: api, Genschema: Genschema, version:version};

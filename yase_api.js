@@ -124,6 +124,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	closestTag:closestTag,
 	findTag:findTag,
 	getRaw:getRaw,
+	version: require('./package.json').version,
 	//initialize:initialize
 	};
 	
