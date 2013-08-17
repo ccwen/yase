@@ -43,6 +43,7 @@ var findTag=function(db,tagname,attributename,value) {
 	var par=['tags',tagname,attributename+'='].concat(value.split('.'));
 	var tag={};
 	tag.ntag=db.get(par,true);
+	if (typeof tag.ntag=='undefined') return {};//not found;
 	if (typeof tag.ntag=='number') {
 		tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
 		tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
@@ -50,6 +51,7 @@ var findTag=function(db,tagname,attributename,value) {
 		tag.text=db.getText(tag.slot);
 		return tag;
 	}
+
 	var out=[],tags=JSON.parse(JSON.stringify(tag.ntag));
 
 	for (var i in tags){
