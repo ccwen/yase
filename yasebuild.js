@@ -28,9 +28,12 @@ module.exports=function( config ) {
         	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
 
         	//get build number if old ydb exists
-	var ydb_old=new require('yadb').open(config.output);
-	var oldbuild=ydb_old.get(['meta','build']) || 0;
-	ydb_old.free();
+    var oldbuild=0;
+    if (fs.existsSync(config.output)) {
+		var ydb_old=new require('yadb').open(config.output);
+		oldbuild=ydb_old.get(['meta','build']) || 0;
+		ydb_old.free();
+    }
 
         	var ydb=new Yasew(config);
         	config.schema=config.schema || "TEI";

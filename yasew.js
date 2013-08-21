@@ -126,14 +126,19 @@ var ontag=function(tag, schema) {
 		if (ti.closetag) context.hidetext=false;
 	}
 	if (ti.opentag) context.tagstack.push(tagname);
+	if (ti.opentag) context.tagstack_fi.push([context.filename,context.crlfcount]);
+
 	if (ti.closetag) {
 		if (context.tagstack.length==0) {
 			abortbuilding('tag underflow');
 		}
 		var tn=context.tagstack.pop();
 		if (tn!=tagname) {
-			abortbuilding('nested tag');
+			console.log('\n\nFATAL:\ntag stack not balance',tn,tagname)
+			console.log('tag stack file info',JSON.stringify(context.tagstack_fi));
+			abortbuilding('tag stack:'+ JSON.stringify(context.tagstack));
 		}
+		context.tagstack_fi.pop();
 	} 
 
 	if (ti.handler) ti.handler.apply(this,[ti, context.sentence.length]);
@@ -425,7 +430,7 @@ var save=function(filename,opts) {
 }
 var Create=function(options) {
 	this.addfilebuffer=addfilebuffer;
-	this.context={tagstack:[],crlfcount:0,totalcrlfcount:0,totalsentencecount:0};//default index options
+	this.context={tagstack:[],tagstack_fi:[],crlfcount:0,totalcrlfcount:0,totalsentencecount:0};//default index options
 	this.output={tags:{}};
 	this.options=options || {};
 	if (!this.options.splitter) this.options.splitter=splitter;
