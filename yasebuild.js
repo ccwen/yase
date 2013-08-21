@@ -25,12 +25,17 @@ module.exports=function( config ) {
 	var files=[];
 	if (config.input.substring(config.input.length-4)=='.lst') files=getfiles(config.input,config.maxfile);
 	else files=[config.input];
+        	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
+
+        	//get build number if old ydb exists
+	var ydb_old=new require('yadb').open(config.output);
+	var oldbuild=ydb_old.get(['meta','build']) || 0;
+	ydb_old.free();
 
         	var ydb=new Yasew(config);
         	config.schema=config.schema || "TEI";
         	
         	config.encoding=config.encoding||"utf8";
-        	config.output=config.output || config.input.substring(0,config.input.length-4)+'.ydb';
         	if (config.moveupdir) config.output='../'+config.output;
         	if (typeof config.schema=='function') {
         		var s=new require('yase').Genschema();
@@ -54,7 +59,8 @@ module.exports=function( config ) {
         		ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
         		ydb.construct();	
         	}
-	
+
+	ydb.output.meta.build=oldbuild+1;
 	ydb.save(config.output);
 
 	return JSON.parse(JSON.stringify(ydb.output.meta)); //prevent memory leak
