@@ -38,9 +38,8 @@ var highlight=function(opts) {
 				till++;
 			}
 
-			output+= opts.text.substring(now,off[i-1+till]);
-			last=off[i-1+till];
-
+			last=off[i+till];
+			output+= opts.text.substring(now,last);
 			output+='</hl>';
 			j++;
 		}

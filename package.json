@@ -1,6 +1,6 @@
 {
   "name": "yase",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "description": "search engine based on YADB for large corpus",
   "main": "index.js",
   "scripts": {

@@ -417,12 +417,15 @@ var save=function(filename,opts) {
 	
 	if (debug) console.time('save file');
 	
-	this.output.customfunc=packcustomfunc.call(this);
 	//console.log(this.output.customfunc)
 
-	if (this.customfunc.processinverted) {
-		this.output.inverted=this.customfunc.processinverted(this.output.inverted);
+	if (this.customfunc.postings2tree) {
+		console.log('performing postings2tree')
+		this.output.postings=this.customfunc.postings2tree(this.output.postings);
 	}
+
+	this.output.customfunc=packcustomfunc.call(this);
+
 	packmeta(this.options,this.context,this.output);
 	ydb.save(this.output);
 	ydb.free();
