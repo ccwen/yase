@@ -58,11 +58,12 @@ module.exports=function( config ) {
 	if (config.customfunc) ydb.setcustomfunc( config.customfunc );	
 	else  			ydb.setcustomfunc( require('./yasecustom') );
 
-        	for (var i in files) {
-        		ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
-        		ydb.construct();	
-        	}
+    for (var i in files) {
+       	ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
+    	ydb.construct();	
+    }
 
+    ydb.output.extra=config.extra||0;
 	ydb.output.meta.build=oldbuild+1;
 	ydb.save(config.output);
 

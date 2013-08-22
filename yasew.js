@@ -300,6 +300,7 @@ var defaulttaghandler=function(taginfo,offset) {
 		if (!tags[k]._offset) tags[k]._offset=[];
 		if (!tags[k]._depth) tags[k]._depth=[];
 		tags[k]._slot.push(this.context.totalsentencecount + this.context.sentences.length);
+		if (taginfo.newslot) offset=0; //reset offset for newslot
 		tags[k]._offset.push(offset);
 		tags[k]._depth.push(this.context.tagstack.length);
 	}
@@ -369,8 +370,8 @@ var packmeta=function(options,context,output) {
 	var meta=output.meta;
 	if (options.dbid) meta.dbid=options.dbid;
 	if (options.author) meta.author=options.author;
-	if (options.website) meta.website=options.website;
-	if (options.minyaseversion) meta.minversion=options.minyaseversion;
+	if (options.url) meta.url=options.url;
+	if (options.min_yase_version) meta.min_yase_version=options.min_yase_version;
 	meta.builddatetime=(new Date()).toString();
 	meta.buildduration=new Date()-context.starttime;
 	meta.slotcount=context.slotcount;

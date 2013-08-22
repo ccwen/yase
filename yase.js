@@ -73,7 +73,7 @@ var highlighttexts=function(dm,seqarr,tofind) {
 		return out;
 	}
 }
-var highlightresult=function(dm,R,phraselength) {
+var highlightresult=function(dm,R,phraselength,nohighlight) {
 	var rescount=0;
 	var blocksize = 2 << (dm.meta.blockshift -1);	
 	//console.log('highlightresult',R)
@@ -94,12 +94,17 @@ var highlightresult=function(dm,R,phraselength) {
 	
 		if (addition) hits=hits.map( function(j) {return addition+j});
 
-		var h=highlight({
-			splitter:dm.customfunc.splitter,
-			hits:hits,
-			text:text,
-			phraselength:phraselength
-		});
+		if (nohighlight) {
+			var h=text;
+		} else {
+			var h=highlight({
+				splitter:dm.customfunc.splitter,
+				hits:hits,
+				text:text,
+				phraselength:phraselength
+			});
+
+		}
 		output[nslot]=h;
 	}
 	return output;
@@ -113,6 +118,7 @@ var phraseSearch=function(tofind,opts) {
 	var tokens=splitted.tokens;
 	var skips=splitted.skips;
 	var g=null,raw=null;
+	var tag=opts.tag||"";
 
 	if (this.phrasecache_raw && this.phrasecache_raw[tofind]) {
 		raw=this.phrasecache_raw[tofind];
@@ -140,6 +146,14 @@ var phraseSearch=function(tofind,opts) {
 		if (this.phrasecache_raw) this.phrasecache_raw[tofind]=raw;
 	}
 
+	if (tag) {
+		pltag=this.tagpostingcache[tag];
+		if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
+		
+		raw=plist.plhead(raw, pltag );
+		g=plist.groupbyblock(raw, this.meta.blockshift);
+	}
+
 	//trim output
 	if (opts.start!=undefined) {
 		opts.maxcount=opts.maxcount||10;
@@ -161,7 +175,7 @@ var phraseSearch=function(tofind,opts) {
 	if (profile) console.time('highlight')
 	var R="";
 	if (opts.showtext) {
-		R=highlightresult(this,g,tokens.length-splitted.skiptokencount);
+		R=highlightresult(this,g,tokens.length-splitted.skiptokencount,!opts.highlight);
 	}
 	if (profile) console.timeEnd('highlight')
 	return R;
@@ -218,7 +232,7 @@ var getRange=function(start,end,opts) {
 	return output;
 }
 var parseSelector=function(sel) {  // tag[attr=value]
-          var m=tag.match(/(.*?)\[(.*?)=(.*)/);
+          var m=sel.match(/(.*?)\[(.*?)=(.*)/);
           if (!m) return;
           var tagname=m[1], attributename=m[2],value=m[3];
           if (value[value.length-1]===']') value=value.substring(0,value.length-1);
@@ -251,6 +265,9 @@ var getTextByTag=function(opts) {
 var getTag=function(tagname,seq) {
 	return this.customfunc.getTag(this.getdb(),tagname,seq);
 }
+var getTagPosting=function(tagname) {
+	return this.customfunc.getTagPosting(this.getdb(),tagname);
+}
 var findTag=function(tagname,attributename,value) {
 	return this.customfunc.findTag(this.getdb(),tagname,attributename,value);
 }
@@ -264,7 +281,7 @@ var closestTag=function(tagname,nslot,opts) {
 		var tn=tagname[i];
 		sel=parseSelector(tn);
 		if (!sel) { //plain tagname
-			var slots= this.getdb().get(['tags',tn,'slot'],true);
+			var slots= this.getdb().get(['tags',tn,'_slot'],true);
 			if (!slots) throw 'undefiend TAG '+tagname;
 			var c=binarysearch.closest( slots,nslot );
 			var tag=this.getTag(tn,c);
@@ -347,6 +364,7 @@ var yase_use = function(fn) {
 		instance.getToc=getToc;
 		instance.getText=getText;
 		instance.getTag=getTag;
+		instance.getTagPosting=getTagPosting;
 		instance.findTag=findTag;
 		instance.getTagAttr=getTagAttr;
 		instance.fetchPage=fetchPage;
@@ -357,6 +375,7 @@ var yase_use = function(fn) {
 		instance.genToc=genToc;
 		instance.phrasecache={};
 		instance.phrasecache_raw={};
+		instance.tagpostingcache={};
 		instance.parseSelector=parseSelector;
 		instance.getTextRange=getTextRange;		
 		instance.getRange=getRange;	

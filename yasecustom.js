@@ -35,6 +35,16 @@ var getTag=function(db,tagname,seq) {
 	r.name=tagname;
 	return r;
 }
+var getTagPosting=function(db,tagname) {
+	var slot= db.get(['tags',tagname,'_slot'],true);
+	var offset= db.get(['tags',tagname,'_offset'],true);
+	var out=[];
+	var shift=2 << (db.meta.blockshift - 1);
+	for (var i=0;i<slot.length;i++) {
+		out.push(shift*slot[i] + offset[i]);
+	}
+	return out;
+}
 var getTagAttr=function(db,tagname,ntag,attributename) {
 	var par=['tags',tagname,attributename,ntag];
 	return db.get(par) ;
@@ -130,6 +140,7 @@ module.exports={
 	splitter:require('./splitter'),
 	postings2tree:postings2tree,
 	token2tree:token2tree,
+	getTagPosting:getTagPosting,
 	//getCrlf:getCrlf,
 	//getCrlfByRange:getCrlfByRange,
 	//findCrlf:findCrlf

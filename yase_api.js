@@ -113,6 +113,7 @@ var closestTag=function(opts) {
 }
 var installservice=function(services) { // so that it is possible to call other services
 	//yase_api(services);
+	require('yadb').api(services);
 	services['yase']={ 
 	getText:getText,
 	fillText:fillText,

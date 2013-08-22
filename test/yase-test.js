@@ -5,7 +5,7 @@ var fs=require('fs')
 vows.describe('yadm 4 test suite').addBatch({
     'texts': {
         topic: function () {
-        		return new Yase.open('../../ltpr/jiangkangyur.ydb');
+        		return new Yase.open('../../../jiangkangyur/jiangkangyur.ydb');
 	},
 	gettext:function(topic) {
 		assert.equal(topic.getText(0).trim(),'རྒྱ་གར་སྐད་དུ།','gettext')

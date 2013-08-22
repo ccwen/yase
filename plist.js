@@ -58,7 +58,24 @@ var sortedIndex = function (array, obj) {
   }
   return low;
 };
+var plhead=function(pl, pltag, opts) {
+  //console.log(pltag[1])
+  opts=opts||{};
+  opts.max=opts.max||1;
+  var out=[];
+  for (var i=0;i<pltag.length;i++) {
+     k = sortedIndex(pl, pltag[i]);
 
+     if (k>-1 && k<pl.length) {
+      if (pltag[i]+1==pl[k]) {
+        out.push(pl[k]);
+      //  console.log(pl[k],pltag[i])
+        if (out.length>=opts.max) break;
+      }
+    }
+  }
+  return out;
+}
 var pland = function (pl1, pl2, distance) {
   var r = [];
   var swap = 0;
@@ -98,6 +115,7 @@ var plphrase = function (postings) {
 var plist={};
 plist.unpack=unpack;
 plist.plphrase=plphrase;
+plist.plhead=plhead;
 
 plist.groupbyblock=groupbyblock;
 module.exports=plist;
