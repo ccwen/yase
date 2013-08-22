@@ -20,7 +20,6 @@ Genschema=function() {
 		return this;
 	}	
 	this.attr=function(tags,attrs,opts) {
-		debugger;
 		opts=opts||{};
 		if (typeof tags=='string') tags=[tags];
 		if (typeof attrs=='string') attrs=[attrs];

@@ -428,7 +428,14 @@ var save=function(filename,opts) {
 	this.output.customfunc=packcustomfunc.call(this);
 
 	packmeta(this.options,this.context,this.output);
-	ydb.save(this.output);
+
+	ydb.openObject();
+	for (var i in this.output) {
+		var enc='variable';
+		if (i=='postings') enc='delta';
+		ydb.save(this.output[i], i, {integerEncoding:enc});	
+	}
+	
 	ydb.free();
 	if (debug) console.timeEnd('save file');
 }
