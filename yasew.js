@@ -45,8 +45,7 @@ var schema=require('./schema');
 var Yadb=require('yadb');
 var taghandlers=require('./taghandlers');
 var abortbuilding=function(message) {
-	console.log('FILE:',context.filename)
-	console.log('LINE:',context.crlfcount+1)
+	console.log('FILE:',context.filename,'LINE:',context.crlfcount+1)
 	throw message;
 }
 var parse = function(buffer) {
@@ -247,6 +246,7 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
 			obj[val].push( nslot );
 		} else {
+			console.log('FILE:',context.filename,'LINE:',context.crlfcount+1);
 			console.log('repeated val:',val, ', tagname:',tagname);
 		}
 	} else  {
