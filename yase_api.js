@@ -78,10 +78,16 @@ var getRaw=function(path) { //path including database name
 	} else {
 		var dbname=path.shift();
 		dbname=dbname.replace(':','/');
-		var se=require('yase').open(dbname);
-		var res=se.get(path);
+		var se=yase(dbname);
+		var res=se.get(path,true);
 	}
 	return res;
+}
+var getBlob=function(opts) {
+	var se=yase(opts.db);
+	var path=opts.blob.split('/');
+	path.unshift('blob');
+	return se.get(path);
 }
 var closestTag=function(opts) {
 	var se=yase(opts.db);
@@ -125,6 +131,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	closestTag:closestTag,
 	findTag:findTag,
 	getRaw:getRaw,
+	getBlob:getBlob,
 	version: require('./package.json').version,
 	//initialize:initialize
 	};
