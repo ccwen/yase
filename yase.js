@@ -177,8 +177,22 @@ var phraseSearch=function(tofind,opts) {
 	if (opts.showtext) {
 		R=highlightresult(this,g,tokens.length-splitted.skiptokencount,!opts.highlight);
 	}
-	if (profile) console.timeEnd('highlight')
-	return R;
+	if (profile) console.timeEnd('highlight');
+	if (opts.array || opts.closesttag) {
+		var out=[];
+		for (var i in R) {
+			i=parseInt(i);
+			var obj={slot:i,text:R[i]};
+			if (opts.closesttag) {
+				obj.closest=closestTag.apply(this,[opts.closesttag,i]);
+			}
+			out.push(obj);
+		}
+		return out;
+	} else {
+		return R;	
+	}
+	
 }
 var getKeys=function(id) {
 	throw 'not implemented'

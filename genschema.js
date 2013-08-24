@@ -3,9 +3,12 @@ Genschema=function() {
 	this.schema={};
 	var addtags=function(tags,opts) {
 		for (var i in tags) {
-			this.schema[tags[i]]=JSON.parse(JSON.stringify(opts));
+			var S=this.schema[tags[i]];
+			var newsetting=JSON.parse(JSON.stringify(opts));
+			if (!S) S=this.schema[tags[i]]=newsetting;
+			else 	for (var i in newsetting) S[i]=newsetting[i];
 			if (handlers[tags[i]]) { // attach a handler automatically
-				this.schema[tags[i]].handler=tags[i];
+				S.handler=tags[i];
 			}			
 		}
 	}
@@ -14,6 +17,11 @@ Genschema=function() {
 		addtags.apply(this,[tags,{newslot:true,savepos:true,savehead:true}]);
 		return this;
 	}
+	this.newslot=function(tags) {
+		if (typeof tags=='string') tags=[tags];
+		addtags.apply(this,[tags,{newslot:true}]);
+		return this;
+	}	
 	this.emptytag=function(tags) {
 		if (typeof tags=='string') tags=[tags];
 		addtags.apply(this,[tags,{emptytag:true,newslot:false,savepos:true,savehead:false}]);

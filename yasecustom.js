@@ -5,7 +5,7 @@ var version=function() { return 0x20130808};
 
 var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
-	return  ( c==0xf0d || c==0x3002 ||  c==0xff1b || ch=='.' || ch==';'|| ch=='|') ;
+	return  ( c==0xf0d || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
 }
 
 var getText=function(db,seq,opts) {
