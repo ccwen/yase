@@ -421,7 +421,7 @@ var save=function(filename,opts) {
 	//console.log(this.output.customfunc)
 
 	if (this.customfunc.postings2tree) {
-		console.log('performing postings2tree')
+		console.log('performing postings2tree');
 		this.output.postings=this.customfunc.postings2tree(this.output.postings);
 	}
 
@@ -432,7 +432,10 @@ var save=function(filename,opts) {
 	ydb.openObject();
 	for (var i in this.output) {
 		var enc='variable';
-		if (i=='postings') enc='delta';
+		if (i=='postings') {
+			enc='delta';
+			debugger;
+		}
 		ydb.save(this.output[i], i, {integerEncoding:enc});	
 	}
 	

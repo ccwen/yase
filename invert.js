@@ -4,7 +4,8 @@
 	this.vpos=sentencecount * this.blocksize ; 
 	for (var i=0;i<tokens.length;i++) {
 		var t=this.normalize(tokens[i]);
-		if (splitted.skips[i]) continue;
+		if (!t || splitted.skips[i]) continue; 
+		
 		this.vpos++; // vpos start from 1, 0 denote the block itself
 		if (!this.postings[t]) {
 		  this.postings[t] = [this.vpos];

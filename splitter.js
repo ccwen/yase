@@ -14,7 +14,7 @@ module.exports=function(s) {
 		res.push(token);
 		offsets.push(i);
 		toskip=skip||(token.charAt(0)=='<' ||
-		            token.charCodeAt(0)<=0x30);
+		            token.charCodeAt(0)<=0x20); 
 		skips.push(toskip);
 		if (toskip) skiptokencount++;
 		token='';
