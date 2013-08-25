@@ -102,8 +102,11 @@ module.exports=function( config ) {
 	} else if (typeof config.schema=='object') ydb.setschema(config.schema);
 	else throw 'no schema';
 	
-	if (config.customfunc) ydb.setcustomfunc( config.customfunc );	
-	else  			       ydb.setcustomfunc( require('./yasecustom') );
+	var customfunc=require('./yasecustom');
+	if (config.customfunc) {
+		for (var i in config.customfunc) customfunc[i]=config.customfunc[i]
+	}
+	ydb.setcustomfunc( customfunc );	
 
     for (var i in files) {
        	ydb.addfilebuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
@@ -114,7 +117,7 @@ module.exports=function( config ) {
 
     ydb.output.extra=config.extra||0;
 	ydb.output.meta.build=oldbuild+1;
-	ydb.save(config.output, {size:config.estimatesize});
+	ydb.save(config.output, {encoding:config.outputencoding,size:config.estimatesize});
 
 	return JSON.parse(JSON.stringify(ydb.output.meta)); //prevent memory leak
 }
