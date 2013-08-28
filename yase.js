@@ -51,7 +51,7 @@ var highlight=function(opts) {
 }
 //return highlighted texts given a raw hits
 var highlighttexts=function(dm,seqarr,tofind) {
-	var R=dm.phraseSearch(tofind,{raw:true});
+	var R=dm.phraseSearch(tofind,{grouped:true});
 
 	var splitted=dm.customfunc.splitter(tofind);
 	var phraselength=splitted.tokens.length-splitted.skiptokencount;
@@ -221,6 +221,7 @@ var getText=function(slot,opts) {
 			 	var splitted=splitter(t[j]);
 			 	for (var i in splitted.tokens) {
 			 		var tk=splitted.tokens[i];
+			 		if (tk=='\n' && opts.addbr) T+="<br/>";
 			 		if (!splitted.skips[i]) {
 			 			tokenoffset++;
 				 		//var vpos=slot[j]*blocksize+tokenoffset;
@@ -259,6 +260,14 @@ var getTextByTag=function(opts) {
 	if (typeof opts.ntag !='undefined') {
 		tagseq=parseInt(opts.ntag);
 	} else {
+		if (typeof opts.value=='string') {
+			var depth=this.meta.schema[opts.tag]
+				      .indexattributes[opts.attribute].depth;
+			if (depth>1) {
+				opts.value=opts.value.split('.');
+				while (opts.value.length<depth) opts.value.push(' ');
+			}
+		}
 		var par=['tags',opts.tag,opts.attribute+'='].concat(opts.value);
 		var tagseq=db.get(par) ;
 	}
@@ -269,7 +278,8 @@ var getTextByTag=function(opts) {
 	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attr || 'id');
 
 	var seqarr=[];
-	for (var i=t.slot;i<t2.slot;i++) {
+	opts.extraslot=opts.extraslot||0;
+	for (var i=t.slot;i<t2.slot+opts.extraslot;i++) {
 		seqarr.push(i); 
 		if (seqarr.length>maxslot) break; 
 	}
@@ -374,6 +384,7 @@ var yase_use = function(fn) {
 			var r = new Function(instance.customfunc[i])
 			instance.customfunc[i]=r();
 		}
+		instance.meta.schema=JSON.parse(instance.meta.schema);
 		//augment interface
 		instance.getToc=getToc;
 		instance.getText=getText;
