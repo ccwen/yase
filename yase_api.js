@@ -33,6 +33,11 @@ var gettextbytag=function(opts) {
 	var res=se.getTextByTag(opts);
 	return res;
 }
+var gettagattr=function(opts) {
+	var se=yase(opts.db);
+	var res=se.getTagAttr(opts.tag,opts.ntag,opts.attr);
+	return res;
+}
 
 var customfunc=function( opts) {
 	var se=yase(opts.db);
@@ -125,6 +130,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	fillText:fillText,
 	getRange:getRange,
 	getTextByTag:gettextbytag,
+	getTagAttr:gettagattr,
 	getTextRange:getTextRange,
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,

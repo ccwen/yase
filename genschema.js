@@ -35,7 +35,7 @@ Genschema=function() {
 			if (!this.schema[tags[i]]) continue;
 			var I=this.schema[tags[i]].indexattributes={};
 			for (var j in attrs) {
-				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', allowrepeat: !!opts.allowrepeat, depth:opts.depth||1};
+				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', allowrepeat: !!opts.allowrepeat, saveval:opts.saveval, depth:opts.depth||1};
 			}
 		}
 		return this;
