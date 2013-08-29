@@ -138,7 +138,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	findTag:findTag,
 	getRaw:getRaw,
 	getBlob:getBlob,
-	version: require('./package.json').version,
+	version: function() { return require('./package.json').version },
 	//initialize:initialize
 	};
 	

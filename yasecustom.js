@@ -7,6 +7,16 @@ var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
 	return  ( c==0xf0d || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
 }
+var isSpaceChar=function(c) {
+	return ((c.charCodeAt(0)>=0x2000 && c.charCodeAt(0)<=0x206f) 
+		|| c<=' '|| c=='?'
+		|| c=='|' || c=='~' || c=='`' || c==';' || c=='.' || c==','
+		|| c=='>' || c==':' || c=='{' || c=='}'
+		|| c=='=' || c=='@' || c=='[' || c==']'
+		|| c=="་" || c=="།");
+}
+var isCJK =function(c) {return ((c>=0x3000 && c<=0x9FFF) 
+	|| (c>=0xD800 && c<0xDFFF) || (c>=0x2FF0 && c<0x2FFF) || (c>=0xFF00) ) ;}
 
 var getText=function(db,seq,opts) {
 	if (!opts) opts={};
@@ -131,6 +141,18 @@ var postings2tree=function(o) {
 	}
 	return res;
 }
+var normalizeToken=function(tk) {
+	if (!isSpaceChar) isSpaceChar=require('yase').customfunc.isSpaceChar;
+	if (!isCJK) isCJK=require('yase').customfunc.isCJK;
+	var start,i=0;
+	while (isSpaceChar(tk[i]))i++;
+	start=i;
+	if (tk[i]=='&' || tk[i]=='<' ||
+		isCJK(tk.charCodeAt(i))) return tk.substring(start).trim();
+	while (!isSpaceChar(tk[i]))i++;
+	end=i;
+	return tk.substr(start,end);
+}
 module.exports={
 	getText:getText,
 	getTag:getTag,
@@ -138,9 +160,15 @@ module.exports={
 	getTagAttr:getTagAttr,
 	isBreaker:isBreaker,
 	splitter:require('./splitter'),
+	tokenize:require('./tokenize'),
+	normalizeToken:normalizeToken,
 	postings2tree:postings2tree,
 	token2tree:token2tree,
 	getTagPosting:getTagPosting,
+	isSpaceChar:isSpaceChar,
+	isCJK:isCJK,
+	normalizeToken:normalizeToken,
+
 	//getCrlf:getCrlf,
 	//getCrlfByRange:getCrlfByRange,
 	//findCrlf:findCrlf
