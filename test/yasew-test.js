@@ -1,43 +1,30 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
-    schema=require('../schema');
+    //schema=require('../schema');
     Yasew=require('../yasew');
-    Yasebuild=require('../yasebuild')
-var xmlfile='test.xml';
+var txtfile='daodejin.txt',xmlfile='daodejin.xml';
 var fs=require('fs')
 
-vows.describe('yadb worker 4 test suite').addBatch({
-  'yasew':{
+vows.describe('yase 4 test suite').addBatch({
+/*
+  'text file':{
         topic: function () {
-        		var yasew=new Yasew();
-		yasew.setschema(schema["TEI"]);
-        		//yasew.setcustomfunc( require('../yasecustom') );
-		yasew.addfilebuffer(fs.readFileSync(xmlfile,'utf8'));
-		yasew.construct();
-
-		return yasew;
+          var yasew2=new Yasew2();
+		  return yasew2;
 	},
-	build:function(topic) {
-		//console.log(topic.output);
-		//assert.deepEqual(topic.tags['pb.a']['n='],{ '1': { '1a': 0, '1b': 1 ,'2a':2} },'id tree')
+	index:function(topic) {
+        topic.indexbuffer(fs.readFileSync(txtfile,'utf8'),txtfile);
 	},
-	write:function(topic) {
-		topic.save("test.ydb");
-	}
-
-},
-  'buildscript':{
+  },
+  */
+  'xml file':{
         topic: function () {
-        		return Yasebuild({
-        			input:'test.lst',
-        			ydbfn:'test3.ydb'
-        		}
-        		);
-        },
-        check:function(topic) {
-        	console.log('check',topic)
-        }
-
-  }
-
+          var yasew2=new Yasew2();
+          return yasew2;
+    },
+    index:function(topic) {
+        topic.indexbuffer(fs.readFileSync(xmlfile,'utf8'),xmlfile);
+        console.log(topic.output)
+    },
+  }  
 }).export(module); // Export the Suite

@@ -145,11 +145,11 @@ var normalizeToken=function(tk) {
 	if (!isSpaceChar) isSpaceChar=require('yase').customfunc.isSpaceChar;
 	if (!isCJK) isCJK=require('yase').customfunc.isCJK;
 	var start,i=0;
-	while (isSpaceChar(tk[i]))i++;
+	while (i<tk.length &&isSpaceChar(tk[i]) ) i++;
 	start=i;
 	if (tk[i]=='&' || tk[i]=='<' ||
 		isCJK(tk.charCodeAt(i))) return tk.substring(start).trim();
-	while (!isSpaceChar(tk[i]))i++;
+	while (i<tk.length && !isSpaceChar(tk[i]))i++;
 	end=i;
 	return tk.substr(start,end);
 }
@@ -161,7 +161,6 @@ module.exports={
 	isBreaker:isBreaker,
 	splitter:require('./splitter'),
 	tokenize:require('./tokenize'),
-	normalizeToken:normalizeToken,
 	postings2tree:postings2tree,
 	token2tree:token2tree,
 	getTagPosting:getTagPosting,
