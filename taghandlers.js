@@ -80,7 +80,7 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 	} 
 }
 
-var defaulttaghandler=function(taginfo,offset) {
+var defaulttaghandler=function(taginfo) {
 	var k=taginfo.fulltagname;
 	var ctx=this.context;
 	var tags=this.output.tags;
@@ -90,7 +90,9 @@ var defaulttaghandler=function(taginfo,offset) {
 	tags[k]._count++;
 	
 	if (taginfo.newslot) {
-		if (taginfo.closetag) {
+		if (taginfo.opentag) {
+			this.addslottext();
+		} else if (taginfo.closetag) {
 			if (taginfo.savehead ||taginfo.saveheadkey) {
 				var k=taginfo.tagname;
 				if (!tags[k]) tags[k]={};
@@ -101,26 +103,32 @@ var defaulttaghandler=function(taginfo,offset) {
 				if (taginfo.saveheadkey)  {
 					var H=tags[k][taginfo.saveheadkey];
 					if (!H) {
-						H=tags[k][taginfo.saveheadkey]={ _slot:[],_ntag :[],_head:[] , _depth:[]};
+						H=tags[k][taginfo.saveheadkey]={ _slot:[],_ntag :[]
+							, _depth:[]};//,_head:[] 
 						if (!ctx.tagattributeslots) ctx.tagattributeslots=[];
 						ctx.tagattributeslots.push(H);
 					}
 
 					H.ntag.push( (tags[k]._count-2) /2 );
 					H._slot.push( ctx.slotcount );
-					H._head.push(headline);
+					//H._head.push(headline);
 					
 					taginfo.saveheadkey='';
 				} else {
-					if (typeof tags[k]._head=='undefined') tags[k]._head=[];
-					tags[k]._head.push(headline);
+					//if (typeof tags[k]._head=='undefined') tags[k]._head=[];
+					//tags[k]._head.push(headline);
 				}
 			}
 			hidetag=true; //remove closetag as already put into sentence
+			ctx.nchar+=ctx.token.length;
+			ctx.ntoken++;
+			this.addslottext();
+			ctx.nchar-=ctx.token.length;
+			ctx.ntoken--;
+
 		}
 		//TODO call add slot text and automatic add text
-		//this.addslottext();
-		//ctx.consumed=offset;
+		
 	}
 
 	if (taginfo.savepos && taginfo.opentag) {
@@ -165,7 +173,7 @@ var extracttagname=function(xml) {
 	return tagname;
 }
 
-var dotag=function(tag, offset) {
+var dotag=function(tag) {
 	var ctx=this.context;
 	var tagname=extracttagname(tag);
 	var ti=ctx.schema[tagname];
@@ -205,8 +213,8 @@ var dotag=function(tag, offset) {
 		ctx.tagstack_fi.pop();
 	} 
 
-	if (ti.handler) ti.handler.apply(this,[ti, offset]);
-	return defaulttaghandler.apply(this,[ti, offset]);
+	if (ti.handler) ti.handler.apply(this,[ti]);
+	return defaulttaghandler.apply(this,[ti]);
 }
 
 

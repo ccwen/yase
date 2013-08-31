@@ -5,8 +5,8 @@ var taghandlers=require('./taghandlers');
 var Yadb=require('yadb');
 
 
-var processtag=function(tag) {
-	
+var processtag=function() {
+	var tag=this.context.token;
 	var i=0,T="";
 	while (i<tag.length) {
 		T+=tag[i++];
@@ -15,62 +15,78 @@ var processtag=function(tag) {
 
 	taghandlers.dotag.apply(this, [T]);
 }
-var processtoken=function(text) {
+var processtoken=function() {
 	var ctx=this.context;
-	var t=this.customfunc.normalizeToken(text);
-	if (!ctx.postings[t]) {
-		  ctx.postings[t] = [this.vpos];
-		  ctx.postingcount++;
-		} else {
-		  ctx.postings[t].push(ctx.vpos);
+	var output=this.output;
+	var t=this.customfunc.normalizeToken(ctx.token);
+	if (!output.postings[t]) {
+		output.postings[t] = [ctx.vpos];
+		ctx.postingcount++;
+	} else {
+		  output.postings[t].push(ctx.vpos);
 	}	
 }
-var addslottext=function(tokencount,s) {
-	var output=this.output;
+var addslottext=function() {
 	var ctx=this.context;
+	if (ctx.lastnchar==ctx.nchar) return;
+	var s=ctx.slotbuffer.substring(ctx.lastnchar,ctx.nchar);
+	var tokencount=ctx.ntoken-ctx.lastntoken;
+
+	var output=this.output;
 	var extraslot=  Math.floor( tokencount / ctx.maxslottoken ); //overflow
-	if (extraslot>0) ctx.overflow.push([ctx.filename,ctx.crlfcount]);
+	if (extraslot>0) {
+		if (!ctx.overflow[ctx.filename]) ctx.overflow[ctx.filename]=[];
+		ctx.overflow[ctx.filename].push(ctx.crlfcount+1);
+	}
 	
 	var slotgroup=Math.floor(ctx.slotcount / ctx.slotperbatch );//
+
 	if (!output.texts[slotgroup]) output.texts[slotgroup]=[];
 	output.texts[slotgroup].push(s);
 	ctx.slotcount+=(1+extraslot);
 	ctx.extraslot+=extraslot;
 	while (extraslot--) output.texts[slotgroup].push(''); //insert null slot
+	ctx.lastntoken=ctx.ntoken;
+	ctx.lastnchar=ctx.nchar;
 }
 var doslot=function(now) {
 	var ctx=this.context;
 	if (ctx.lastpos==now) return;
-	var s=this.buffer.substring(ctx.lastpos,now)
+	var s=this.buffer.substring(ctx.lastpos,now);
+	ctx.slotbuffer=s;
+	ctx.ntoken=0; ctx.lastntoken=0;
+	ctx.nchar=0;  ctx.lastnchar=0;
+
 	var tokens=this.customfunc.tokenize(s);
-	ctx.consumed=0;
-	ctx.tokenconsumed=0;
 	ctx.vpos=ctx.slotcount*this.context.blocksize;
 	for (var i=0;i<tokens.length;i++) {
-		var T=tokens[i];
-		if (T[0]=='<') {
-			processtag.apply(this,[T]);
+		ctx.token=tokens[i];
+		if (ctx.token[0]=='<') {
+			processtag.call(this);
 		} else {
-			processtoken.apply(this,[tokens[i]]);
+			processtoken.call(this);
 			ctx.offset++;
 			ctx.vpos++;
 		}
+		ctx.nchar+=ctx.token.length;
+		ctx.ntoken=i;
 	}
-	var remain=s.substring(ctx.consumed);
-	this.addslottext(tokens.length-ctx.tokenconsumed,remain);
+	this.addslottext();
 	ctx.lastpos=now;
 }
 var indexbuffer=function(B,fn) {
 	this.buffer=B;
+	var ctx=this.context;
 	this.context.filename=fn;
 	var i=0,intag;
 	while (i<B.length) {
-		if (B[i]=='\n') this.context.crlfcount++;
+		if (B[i]=='\n') ctx.crlfcount++;
 		if (B[i]=='<') intag=true;
 		if (this.customfunc.isBreaker(B[i]) && !intag) {
 			while (B[i]
 				  &&(this.customfunc.isBreaker(B[i]) || B.charCodeAt(i)<=0x20) 
 				  && i<B.length) {
+				if (B[i]=='\n') ctx.crlfcount++;
 				i++;
 			}
 			doslot.apply(this,[i]);
@@ -81,19 +97,21 @@ var indexbuffer=function(B,fn) {
 	doslot.apply(this,[B.length]);
 }
 
-var initinverted=function(context,opts) {
+var initinverted=function(opts) {
+	var ctx=this.context;
+	var output=this.output;
 	opts=opts||{};
-	context.blockshift=opts.blockshift || DEFAULTBLOCKSHIFT ; //default blocksize 32
-	if (context.blockshift>10) {
+	ctx.blockshift=opts.blockshift || DEFAULTBLOCKSHIFT ; //default blocksize 32
+	if (ctx.blockshift>10) {
 		console.warn('max block size is 1024, reduce your blockshift setting');
-		context.blockshift=10;
+		ctx.blockshift=10;
 	}
-	context.blocksize=2 << (context.blockshift - 1);//Math.pow(2,handle.blockshift);
-	console.log('BLOCKSIZE',context.blocksize)
-	context.postings =  {};
-	context.postingcount = 0;
-	context.vpos  = 0;	
-	context.offset= 0; // token offset of current slot
+	ctx.blocksize=2 << (ctx.blockshift - 1);//Math.pow(2,handle.blockshift);
+	console.log('BLOCKSIZE',ctx.blocksize)
+	output.postings =  {};
+	ctx.postingcount = 0;
+	ctx.vpos  = 0;	
+	ctx.offset= 0; // token offset of current slot
 }
 
 var initialize=function(options,context,output) {
@@ -104,7 +122,7 @@ var initialize=function(options,context,output) {
 	context.tagstack=[];
 	context.tagstack_fi=[];
 	context.crlfcount=0;
-	context.overflow=[];
+	context.overflow={};
 	context.totalcrlfcount=0;
 	context.extraslot=0;	
 	options.slotperbatch=options.slotperbatch||256;
@@ -131,35 +149,23 @@ var packmeta=function(options,context,output) {
 	meta.version=options.version || '0.0.0';
 	
 	meta.tags=Object.keys(output.tags);
-	meta.schema=JSON.stringify(options.schema);
+	meta.schema=JSON.stringify(context.schema);
 	//TODO , support boolean type
 
 	return meta;
 }
 
 var finalize=function() {
+	var ctx=this.context;
 	if (this.finalized) {
 		console.warn('already finalized')
 		return;
 	}
-/*	
-	for (var i in this.output.tags) {
-		//convert sentence seq to slot seq in tag._slot
-		tagsentence2slot(this.output.tags[i], this.context.sentence2slot);
-		//compress depth array, replace with number if all in same depth
-		var D=this.output.tags[i]._depth;
-		if (D && D.length>1) {
-			for (var j=1;j<D.length;j++) {
-				if (D[0]!=D[j]) break;
-			}
-			if (j==D.length) this.output.tags[i]._depth=D[0]; //all items have same value
-		} else if (D&& D.length==1) this.output.tags[i]._depth=D[0]; //only one item
+	if (ctx.overflow) {
+		console.log('overflow slots:',ctx.overflow)
 	}
-	for (var i in this.context.tagattributeslots) tagsentence2slot(this.context.tagattributeslots[i], this.context.sentence2slot);
-	this.context.sentence2slot=[];	
-*/
-	this.context.totalcrlfcount+=this.context.crlfcount;
-	//compress depth array)
+	//console.log(JSON.stringify(this.output.texts,'',' '))
+	ctx.totalcrlfcount+=ctx.crlfcount;
 	this.finalized=true;
 }
 
@@ -187,7 +193,7 @@ var save=function(filename,opts) {
 
 	this.output.customfunc=packcustomfunc.call(this);
 	packmeta(this.options,this.context,this.output);
-
+	
 	ydb.openObject();
 	for (var i in this.output) {
 		var enc='variable';
@@ -205,6 +211,7 @@ var abortbuilding=function(message) {
 }
 
 var Create=function(options) {
+
 	this.indexbuffer=indexbuffer;
 	this.context={};//default index options
 	
@@ -220,7 +227,10 @@ var Create=function(options) {
 	this.finalize=finalize;
 
 	initialize(this.options,this.context,this.output);
-	initinverted(this.context,options);
+	initinverted.apply(this,[options]);
+	this.options.schema=this.options.schema||"TEI";
+	
+	this.loadschema(this.options.schema);
 	return this;
 }
 module.exports=Create;

@@ -38,7 +38,7 @@ module.exports=function( config ) {
     }
 
 	var ydb=new Yasew(config);
-	ydb.loadschema(config.schema);
+
 	
 	config.encoding=config.encoding||"utf8";
 	if (config.moveupdir) config.output='../'+config.output;

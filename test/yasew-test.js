@@ -19,12 +19,13 @@ vows.describe('yase 4 test suite').addBatch({
   */
   'xml file':{
         topic: function () {
-          var yasew2=new Yasew2();
-          return yasew2;
+          var yasew=new Yasew();
+          return yasew;
     },
     index:function(topic) {
         topic.indexbuffer(fs.readFileSync(xmlfile,'utf8'),xmlfile);
-        console.log(topic.output)
+       // console.log(topic.output)
+       topic.finalize();
     },
   }  
 }).export(module); // Export the Suite
