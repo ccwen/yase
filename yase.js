@@ -18,43 +18,37 @@ var getPostingById=function(id) {
 	return r;
 }
 var highlight=function(opts) {
-	
-	var res=opts.splitter(opts.text);
-	var i=0,j=0,last=0,voff=0;
-	var off=res.offsets;
+	var tokens=opts.tokenize(opts.text);
+	var i=0,j=0,last=0,voff=0,now=0;
 	var output='';
 	
-	while (i<res.tokens.length) {
-		if (!res.skips[i]) voff++;
-
-		if (j<off.length && voff==opts.hits[j]) {
-			if (i) now=off[i-1]+1; else now=0;
-			output+= opts.text.substring(last, now);
+	while (i<tokens.length) {
+		if (voff==opts.hits[j]) {
+			while (last<i) output+= tokens[last++];
+			while (tokens[i][0]=='<') output+= tokens[i++];
 			output+= '<hl>';
 			var len=opts.phraselength;
-			var till=0;
 			while (len) {
-				if (!res.skips[i+till]) { len--}
-				till++;
+				output+=tokens[i++];len--;
+				if (i>=tokens.length) break;
+				if (tokens[i][0]!='<') voff++;				
 			}
-
-			last=off[i+till];
-			output+= opts.text.substring(now,last);
 			output+='</hl>';
+			last=i;
 			j++;
 		}
+		if (tokens[i][0]!='<') voff++;
 		i++;
-
 	}
-	output+=opts.text.substring(last);
+	while (last<tokens.length) output+= tokens[last++];
 	return output;
 }
 //return highlighted texts given a raw hits
 var highlighttexts=function(dm,seqarr,tofind) {
 	var R=dm.phraseSearch(tofind,{grouped:true});
 
-	var splitted=dm.customfunc.splitter(tofind);
-	var phraselength=splitted.tokens.length-splitted.skiptokencount;
+	var tokens=dm.customfunc.tokenize(tofind);
+	var phraselength=tokens.length;
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
 		var t=dm.getText(parseInt(seqarr));
@@ -66,7 +60,7 @@ var highlighttexts=function(dm,seqarr,tofind) {
 			var seq=seqarr[i];
 			var hits=R[seq];
 			var t=dm.getText(seq);
-			var hopts={ text: t , hits: hits, splitter:dm.customfunc.splitter,phraselength:phraselength};
+			var hopts={ text: t , hits: hits, tokenize:dm.customfunc.tokenize,phraselength:phraselength};
 			if (hits) out+= highlight.apply(dm, [ hopts]);
 			else out+=t;
 		}
@@ -98,7 +92,7 @@ var highlightresult=function(dm,R,phraselength,nohighlight) {
 			var h=text;
 		} else {
 			var h=highlight({
-				splitter:dm.customfunc.splitter,
+				tokenize:dm.customfunc.tokenize,
 				hits:hits,
 				text:text,
 				phraselength:phraselength
@@ -111,12 +105,10 @@ var highlightresult=function(dm,R,phraselength,nohighlight) {
 }
 var profile=false;
 var phraseSearch=function(tofind,opts) {
-	var splitter=this.customfunc.splitter;
-	if (!splitter) throw 'no splitter';
+	var tokenize=this.customfunc.tokenize;
+	if (!tokenize) throw 'no tokenizer';
 	var postings=[];
-	var splitted=splitter(tofind);
-	var tokens=splitted.tokens;
-	var skips=splitted.skips;
+	var tokens=tokenize(tofind);
 	var g=null,raw=null;
 	var tag=opts.tag||"";
 
@@ -129,7 +121,7 @@ var phraseSearch=function(tofind,opts) {
 	} else {
 		if (profile) console.time('get posting');
 		for (var i in tokens) {
-			if (skips[i]) continue;
+			if (tokens[i].trim()[0]=='<') continue;
 			var posting=this.getPostingById(tokens[i]);
 			postings.push(posting);
 		}
@@ -147,8 +139,9 @@ var phraseSearch=function(tofind,opts) {
 	}
 
 	if (tag) {
-		pltag=this.tagpostingcache[tag];
-		if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
+		pltag=this.getTagPosting(tag);
+		//this.tagpostingcache[tag];
+		//if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
 		
 		raw=plist.plhead(raw, pltag );
 		g=plist.groupbyblock(raw, this.meta.blockshift);
@@ -175,7 +168,7 @@ var phraseSearch=function(tofind,opts) {
 	if (profile) console.time('highlight')
 	var R="";
 	if (opts.showtext) {
-		R=highlightresult(this,g,tokens.length-splitted.skiptokencount,!opts.highlight);
+		R=highlightresult(this,g,tokens.length,!opts.highlight);
 	}
 	if (profile) console.timeEnd('highlight');
 	if (opts.array || opts.closesttag) {
@@ -217,12 +210,12 @@ var getText=function(slot,opts) {
 			var T="";
 			var tokenoffset=0;
 			if (opts.tokentag) {
-			 	var splitter=this.customfunc.splitter;
-			 	var splitted=splitter(t[j]);
-			 	for (var i in splitted.tokens) {
-			 		var tk=splitted.tokens[i];
-			 		if (tk=='\n' && opts.addbr) T+="<br/>";
-			 		if (!splitted.skips[i]) {
+			 	var tokenize=this.customfunc.tokenize;
+			 	var tokens=tokenize(t[j]);
+			 	for (var i in tokens) {
+			 		var tk=tokens[i];
+			 		//if (tk=='\n' && opts.addbr) T+="<br/>";
+			 		if (!tokens[i][0]!='<') {
 			 			tokenoffset++;
 				 		//var vpos=slot[j]*blocksize+tokenoffset;
 				 		T+='<tk n="'+tokenoffset+'">'+tk+'</tk>';
@@ -305,16 +298,16 @@ var closestTag=function(tagname,nslot,opts) {
 		var tn=tagname[i];
 		sel=parseSelector(tn);
 		if (!sel) { //plain tagname
-			var slots= this.getdb().get(['tags',tn,'_slot'],true);
-			if (!slots) throw 'undefiend TAG '+tagname;
-			var c=binarysearch.closest( slots,nslot );
+			var vposarr= this.getdb().get(['tags',tn,'_vpos'],true);
+			if (!vposarr) throw 'undefiend TAG '+tn;
+			var c=binarysearch.closest( vposarr,nslot*this.meta.blocksize );
 			var tag=this.getTag(tn,c);
 			tag.ntag=c;
 			output.push( tag);	
 		} else { // attr=value selector
 			//var slots= this.getdb().get(['tags',sel.tag,'slot'],true);
-			var slots=this.getdb().get(['tags',sel.tag,sel.attribute+'='+sel.value,'slot']);
-			var c=binarysearch.closest( slots, nslot);
+			var vposarr=this.getdb().get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
+			var c=binarysearch.closest( vposarr, nslot*this.meta.blocksize);
 			//convert to ntag
 			var ntags=this.getdb().get(['tags',sel.tag,sel.attribute+'='+sel.value,'ntag']);
 			var tag=this.getTag(sel.tag,ntags[c]);
@@ -346,9 +339,9 @@ var genToc=function(toctree,opts) {
 
 	var output=[];
 	for (var i in toctree) {
-		var slots=db.get(['tags',toctree[i],'slot']);
-		for (var j in slots) {
-			output.push( [ 1+parseInt(i), slots[j]])	
+		var vposarr=db.get(['tags',toctree[i],'_vpos']);
+		for (var j in vposarr) {
+			output.push( [ 1+parseInt(i), vposarr[j]])	
 		}
 		
 	}
@@ -385,6 +378,7 @@ var yase_use = function(fn) {
 			instance.customfunc[i]=r();
 		}
 		instance.meta.schema=JSON.parse(instance.meta.schema);
+		instance.meta.blocksize=2<<(instance.meta.blockshift -1);
 		//augment interface
 		instance.getToc=getToc;
 		instance.getText=getText;

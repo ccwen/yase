@@ -63,12 +63,12 @@ var plhead=function(pl, pltag, opts) {
   opts=opts||{};
   opts.max=opts.max||1;
   var out=[];
-  for (var i=0;i<pltag.length;i++) {
-     k = sortedIndex(pl, pltag[i]);
+  for (var i=0;i<pl.length;i++) {
+     k = sortedIndex(pltag, pl[i]);
 
-     if (k>-1 && k<pl.length) {
-      if (pltag[i]+1==pl[k]) {
-        out.push(pl[k]);
+     if (k>-1 && k<pltag.length) {
+      if (pltag[k]==pl[i]) {
+        out.push(pl[i]);
       //  console.log(pl[k],pltag[i])
         if (out.length>=opts.max) break;
       }

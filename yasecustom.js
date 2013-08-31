@@ -35,10 +35,13 @@ var getText=function(db,seq,opts) {
 	}
 }	
 var getTag=function(db,tagname,seq) {
-	var slot= db.get(['tags',tagname,'_slot',seq]);
-	var offset= db.get(['tags',tagname,'_offset',seq]);
+	var vpos= db.get(['tags',tagname,'_vpos',seq]);
+	var slot= vpos >>db.meta.blockshift;
+	var offset= vpos% db.meta.blocksize;
 	var head= db.get(['tags',tagname,'_head',seq]);
+	
 	var r={};
+	if (typeof vpos!=='undefined') r.vpos=vpos;
 	if (typeof slot!=='undefined') r.slot=slot;
 	if (typeof offset!=='undefined') r.offset=offset;
 	if (typeof head!=='undefined') r.head=head;
@@ -46,14 +49,17 @@ var getTag=function(db,tagname,seq) {
 	return r;
 }
 var getTagPosting=function(db,tagname) {
-	var slot= db.get(['tags',tagname,'_slot'],true);
-	var offset= db.get(['tags',tagname,'_offset'],true);
+	//var slot= db.get(['tags',tagname,'_slot'],true);
+	//var offset= db.get(['tags',tagname,'_offset'],true);
+	var vpos= db.get(['tags',tagname,'_vpos'],true);
+	/*
 	var out=[];
 	var shift=2 << (db.meta.blockshift - 1);
 	for (var i=0;i<slot.length;i++) {
 		out.push(shift*slot[i] + offset[i]);
 	}
-	return out;
+	*/
+	return vpos;
 }
 var getTagAttr=function(db,tagname,ntag,attributename) {
 	var par=['tags',tagname,attributename,ntag];
@@ -65,8 +71,10 @@ var findTag=function(db,tagname,attributename,value) {
 	tag.ntag=db.get(par,true);
 	if (typeof tag.ntag=='undefined') return {};//not found;
 	if (typeof tag.ntag=='number') {
-		tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
-		tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
+		tag.vpos= db.get(['tags',tagname,'_vpos',tag.ntag]);
+		tag.slot= tag.vpos >> db.meta.blockshift;
+		tag.offset= tag.vpos % db.meta.blocksize;
+
 		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
 		tag.text=db.getText(tag.slot);
 		return tag;
@@ -77,8 +85,12 @@ var findTag=function(db,tagname,attributename,value) {
 	for (var i in tags){
 		var tag={};
 		tag.ntag=tags[i];
-		tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
-		tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
+
+		tag.vpos= db.get(['tags',tagname,'_vpos',tag.ntag]);
+		tag.slot= tag.vpos >> db.meta.blockshift;
+		tag.offset= tag.vpos % db.meta.blocksize;
+		//tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
+		//tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
 		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
 		tag.text=db.getText(tag.slot);
 		out.push(tag)

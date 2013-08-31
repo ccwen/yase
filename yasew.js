@@ -4,7 +4,6 @@ var DEFAULTBLOCKSHIFT=5;
 var taghandlers=require('./taghandlers');
 var Yadb=require('yadb');
 
-
 var processtag=function() {
 	var tag=this.context.token;
 	var i=0,T="";
@@ -12,12 +11,15 @@ var processtag=function() {
 		T+=tag[i++];
 		if (tag[i-1]=='>') break;
 	}
+	while (i<tag.length) if (tag[i++]=='\n') this.context.crlfcount++;
 
 	taghandlers.dotag.apply(this, [T]);
 }
 var processtoken=function() {
 	var ctx=this.context;
 	var output=this.output;
+	var i=0;
+	while (i<ctx.token.length) if (ctx.token[i++]=='\n') this.context.crlfcount++;
 	var t=this.customfunc.normalizeToken(ctx.token);
 	if (!output.postings[t]) {
 		output.postings[t] = [ctx.vpos];
@@ -31,12 +33,11 @@ var addslottext=function() {
 	if (ctx.lastnchar==ctx.nchar) return;
 	var s=ctx.slotbuffer.substring(ctx.lastnchar,ctx.nchar);
 	var tokencount=ctx.ntoken-ctx.lastntoken;
-
 	var output=this.output;
 	var extraslot=  Math.floor( tokencount / ctx.maxslottoken ); //overflow
 	if (extraslot>0) {
 		if (!ctx.overflow[ctx.filename]) ctx.overflow[ctx.filename]=[];
-		ctx.overflow[ctx.filename].push(ctx.crlfcount+1);
+		ctx.overflow[ctx.filename].push(ctx.crlfcount);
 	}
 	
 	var slotgroup=Math.floor(ctx.slotcount / ctx.slotperbatch );//
@@ -48,12 +49,13 @@ var addslottext=function() {
 	while (extraslot--) output.texts[slotgroup].push(''); //insert null slot
 	ctx.lastntoken=ctx.ntoken;
 	ctx.lastnchar=ctx.nchar;
+	ctx.vpos=ctx.slotcount*this.context.blocksize;
 }
 var doslot=function(now) {
 	var ctx=this.context;
-	if (ctx.lastpos==now) return;
 	var s=this.buffer.substring(ctx.lastpos,now);
 	ctx.slotbuffer=s;
+
 	ctx.ntoken=0; ctx.lastntoken=0;
 	ctx.nchar=0;  ctx.lastnchar=0;
 
@@ -61,7 +63,7 @@ var doslot=function(now) {
 	ctx.vpos=ctx.slotcount*this.context.blocksize;
 	for (var i=0;i<tokens.length;i++) {
 		ctx.token=tokens[i];
-		if (ctx.token[0]=='<') {
+		if (ctx.token[0]=='<') { //do not allow space at the beginning of file
 			processtag.call(this);
 		} else {
 			processtoken.call(this);
@@ -74,22 +76,29 @@ var doslot=function(now) {
 	this.addslottext();
 	ctx.lastpos=now;
 }
+var newfile=function(fn){
+	var ctx=this.context;
+	ctx.filename=fn;
+	ctx.crlfcount=0;
+	ctx.slotbuffer="";
+	ctx.lastpos=0;
+	ctx.totalcrlfcount+=ctx.crlfcount;
+}
 var indexbuffer=function(B,fn) {
 	this.buffer=B;
 	var ctx=this.context;
-	this.context.filename=fn;
-	var i=0,intag;
+	newfile.apply(this,[fn]);
+	
+	var i=0,intag=false;
+
 	while (i<B.length) {
-		if (B[i]=='\n') ctx.crlfcount++;
 		if (B[i]=='<') intag=true;
 		if (this.customfunc.isBreaker(B[i]) && !intag) {
-			while (B[i]
-				  &&(this.customfunc.isBreaker(B[i]) || B.charCodeAt(i)<=0x20) 
-				  && i<B.length) {
-				if (B[i]=='\n') ctx.crlfcount++;
+			while ( i+1<B.length && (this.customfunc.isBreaker(B[i+1]) 
+				|| B.charCodeAt(i+1)<=0x20) ) {
 				i++;
 			}
-			doslot.apply(this,[i]);
+			doslot.apply(this,[i+1]);
 		}
 		if (B[i]=='>') intag=false;
 		i++;
@@ -107,6 +116,7 @@ var initinverted=function(opts) {
 		ctx.blockshift=10;
 	}
 	ctx.blocksize=2 << (ctx.blockshift - 1);//Math.pow(2,handle.blockshift);
+	console.log('Start indexing',new Date());
 	console.log('BLOCKSIZE',ctx.blocksize)
 	output.postings =  {};
 	ctx.postingcount = 0;
@@ -118,10 +128,6 @@ var initialize=function(options,context,output) {
 	options=options||{};
 	context.starttime=new Date();
 	context.slotcount=0;
-	context.lastpos=0;
-	context.tagstack=[];
-	context.tagstack_fi=[];
-	context.crlfcount=0;
 	context.overflow={};
 	context.totalcrlfcount=0;
 	context.extraslot=0;	
@@ -156,7 +162,26 @@ var packmeta=function(options,context,output) {
 }
 
 var finalize=function() {
+	if (this.finalized) return;
 	var ctx=this.context;
+
+	for (var i in this.output.tags) {
+		//compress depth array, replace with number if all in same depth
+		var D=this.output.tags[i]._depth;
+		if (D && D.length>1) {
+			for (var j=1;j<D.length;j++) {
+				if (D[0]!=D[j]) {
+					//console.log(D[0],D[j],'depth no equal')
+					break;
+				}
+			}
+			if (j==D.length) {
+				//console.log('compact tag depth')
+				this.output.tags[i]._depth=D[0]; //all items have same value
+			}
+		} else if (D&& D.length==1) this.output.tags[i]._depth=D[0]; //only one item
+	}	
+
 	if (this.finalized) {
 		console.warn('already finalized')
 		return;
@@ -164,7 +189,7 @@ var finalize=function() {
 	if (ctx.overflow) {
 		console.log('overflow slots:',ctx.overflow)
 	}
-	//console.log(JSON.stringify(this.output.texts,'',' '))
+	//console.log(JSON.stringify(this.output.texts))
 	ctx.totalcrlfcount+=ctx.crlfcount;
 	this.finalized=true;
 }
@@ -181,7 +206,7 @@ var packcustomfunc=function() {
 var save=function(filename,opts) {
 	opts=opts||{};
 	var ydb=new Yadb.create(filename,opts);
-	if (!this.finalized) finalize.call(this);
+	finalize.call(this);
 	var strencoding=opts.encoding||'utf8';
 	ydb.stringEncoding(strencoding);
 	
@@ -206,7 +231,7 @@ var save=function(filename,opts) {
 }
 var abortbuilding=function(message) {
 	var ctx=this.context;
-	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount+1)
+	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount)
 	throw message;
 }
 
@@ -228,6 +253,7 @@ var Create=function(options) {
 
 	initialize(this.options,this.context,this.output);
 	initinverted.apply(this,[options]);
+	taghandlers.initialize.apply(this,[options]);
 	this.options.schema=this.options.schema||"TEI";
 	
 	this.loadschema(this.options.schema);

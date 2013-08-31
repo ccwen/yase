@@ -1,10 +1,11 @@
 /*
-  simplified version of tokenizer, will put into yadb
-  splitter for romanized devanagari
+  2013/8/30
+  space characters will follow each token
+  only the first token might have leading space.
 */
 module.exports=function(s) {
-	var isCJK=require('./yasecustom').isCJK;
-	var isSpaceChar=require('./yasecustom').isSpaceChar;
+	var isCJK=require('yase').customfunc.isCJK;
+	var isSpaceChar=require('yase').customfunc.isSpaceChar;
 	var res=[];
 	var i=0, last=0; 
 	addtoken=function(now) {

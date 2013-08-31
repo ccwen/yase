@@ -70,13 +70,14 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 	if (typeof obj[val] !=='undefined') {
 		if (ai.allowrepeat) {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
-			obj[val].push( nslot );
+			obj[val].push( this.context.vpos );
 		} else {
-			console.log('FILE:',context.filename,'LINE:',context.crlfcount+1);
+			var ctx=this.context;
+			console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount);
 			console.log('repeated val:',val, ', tagname:',tagname);
 		}
 	} else  {
-		obj[val]= nslot; 
+		obj[val]= this.context.vpos; 
 	} 
 }
 
@@ -85,6 +86,10 @@ var defaulttaghandler=function(taginfo) {
 	var ctx=this.context;
 	var tags=this.output.tags;
 	var hidetag=false;
+	//if (taginfo.tagname=='注' || taginfo.tagname=='t') {
+	//	console.log(taginfo,ctx.filename,ctx.crlfcount)
+	//}
+	
 	if (taginfo.append) k+=taginfo.append;
 	if (!tags[k]) tags[k]={ _count:0};
 	tags[k]._count++;
@@ -97,26 +102,27 @@ var defaulttaghandler=function(taginfo) {
 				var k=taginfo.tagname;
 				if (!tags[k]) tags[k]={};
 				
-				//var p=ctx.sentence.indexOf('>');
-				//var headline=ctx.sentence.substring(p+1);
-				var headline='';
+				var sentence=ctx.slotbuffer.substring(ctx.lastnchar,ctx.nchar);
+				var p=sentence.indexOf('>');
+				var headline=sentence.substring(p+1);
+
 				if (taginfo.saveheadkey)  {
 					var H=tags[k][taginfo.saveheadkey];
 					if (!H) {
-						H=tags[k][taginfo.saveheadkey]={ _slot:[],_ntag :[]
-							, _depth:[]};//,_head:[] 
+						H=tags[k][taginfo.saveheadkey]={ _vpos:[],_ntag :[]
+							,_head:[] , _depth:[]};//
 						if (!ctx.tagattributeslots) ctx.tagattributeslots=[];
 						ctx.tagattributeslots.push(H);
 					}
 
 					H.ntag.push( (tags[k]._count-2) /2 );
-					H._slot.push( ctx.slotcount );
-					//H._head.push(headline);
+					H._vpos.push( ctx.vpos );
+					H._head.push(headline);
 					
 					taginfo.saveheadkey='';
 				} else {
-					//if (typeof tags[k]._head=='undefined') tags[k]._head=[];
-					//tags[k]._head.push(headline);
+					if (typeof tags[k]._head=='undefined') tags[k]._head=[];
+					tags[k]._head.push(headline);
 				}
 			}
 			hidetag=true; //remove closetag as already put into sentence
@@ -132,11 +138,11 @@ var defaulttaghandler=function(taginfo) {
 	}
 
 	if (taginfo.savepos && taginfo.opentag) {
-		if (!tags[k]._slot) tags[k]._slot=[];
-		if (!tags[k]._offset) tags[k]._offset=[];
+		if (!tags[k]._vpos) tags[k]._vpos=[];
+		//if (!tags[k]._offset) tags[k]._offset=[];
 		if (!tags[k]._depth) tags[k]._depth=[];
-		tags[k]._slot.push(ctx.slotcount);
-		tags[k]._offset.push(ctx.offset);
+		tags[k]._vpos.push(ctx.vpos);
+		//tags[k]._offset.push(ctx.offset);
 		tags[k]._depth.push(ctx.tagstack.length);
 	}
 
@@ -148,7 +154,7 @@ var defaulttaghandler=function(taginfo) {
 			if (val.length>1) val=val[1]; else val=val[0];
 			var depth=taginfo.indexattributes[i].depth || 1;
 			//console.log(attrkey,val,this.tags[k][attrkey],depth)
-			iddepth2tree(tags[k][attrkey], val, tags[k]._slot.length -1,  depth, taginfo.indexattributes[i] , taginfo.tagname);
+			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, taginfo.indexattributes[i] , taginfo.tagname]);
 			if (taginfo.indexattributes[i].savehead) {
 				taginfo.saveheadkey=attrkey+val;
 			}
@@ -188,22 +194,26 @@ var dotag=function(tag) {
 
 	ti.fulltagname=tagname; 
 	if (ti.closetag && !ti.opentag) ti.fulltagname='/'+tagname;
-	else if (ti.closetag && ti.opentag) ti.fulltagname=tagname+'/';
+	//else if (ti.closetag && ti.opentag) ti.fulltagname=tagname+'/';
 
 	if (ti.emptytag) {
 		if (!ti.closetag || !ti.opentag) this.abortbuilding('invalid empty tag, schema:'+JSON.stringify(ti));
 	}
+	/*
 	if (ti.comment) {
 		if (ti.opentag) ctx.hidetext=true;
 		if (ti.closetag) ctx.hidetext=false;
 	}
+	*/
 	if (ti.opentag) {
 		ctx.tagstack.push(tagname);
 		ctx.tagstack_fi.push([ctx.filename,ctx.crlfcount]);
 	}
 
 	if (ti.closetag) {
-		if (ctx.tagstack.length==0) this.abortbuilding('tag underflow');
+		if (ctx.tagstack.length==0) {
+			this.abortbuilding('tag underflow');
+		}
 		var tn=ctx.tagstack.pop();
 		if (tn!=tagname) {
 			console.log('\n\nFATAL:\ntag stack not balance',tn,tagname)
@@ -217,6 +227,9 @@ var dotag=function(tag) {
 	return defaulttaghandler.apply(this,[ti]);
 }
 
-
+var initialize=function() {
+	this.context.tagstack=[];
+	this.context.tagstack_fi=[];
+}
 module.exports={predefined:predefined,dotag:dotag,
-	loadschema:loadschema,setschema:setschema};
+	loadschema:loadschema,setschema:setschema, initialize:initialize};

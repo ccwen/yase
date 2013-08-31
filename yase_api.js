@@ -99,6 +99,13 @@ var closestTag=function(opts) {
 	var output=[];
 	var slots=opts.slots; //default is an array
 	//console.time('closestTag')
+	if (typeof opts.slot=='undefined') {
+		if (typeof opts.vpos=='object') {
+			opts.slot=opts.vpos.map(function(i) {return i >> se.meta.blockshift});
+		} else if (typeof opts.vpos=='number') {
+			opts.slot=opts.vpos>>se.meta.blockshift;
+		}
+	}
 	if (typeof opts.slot=='number') slots=[opts.slot];
 	for (var i=0;i<slots.length;i++) {
 		var tags=se.closestTag(opts.tag, slots[i]);

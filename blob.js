@@ -1,5 +1,5 @@
 var wrench=require('./wrench');
-
+var fs=require('fs');
 /*add blob recursively from file system*/
 var addblob=function(blobsetting, output) {
 	output.blob={};
