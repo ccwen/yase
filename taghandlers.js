@@ -48,7 +48,7 @@ var loadschema=function(S) {
 	} else if (typeof S=='object') this.setschema(S);
 	else throw 'no schema';	
 }
-var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
+var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 	var idarr=null;
 	if (ai.cbid2tree) idarr=ai.cbid2tree(id); else {
 		if (depth==1) {
@@ -70,14 +70,14 @@ var iddepth2tree=function(obj,id,nslot,depth,ai ,tagname) {
 	if (typeof obj[val] !=='undefined') {
 		if (ai.allowrepeat) {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
-			obj[val].push( this.context.vpos );
+			obj[val].push(ntag);
 		} else {
 			var ctx=this.context;
 			console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount);
 			console.log('repeated val:',val, ', tagname:',tagname);
 		}
 	} else  {
-		obj[val]= this.context.vpos; 
+		obj[val]= ntag; 
 	} 
 }
 
