@@ -59,18 +59,27 @@ var sortedIndex = function (array, obj) {
   return low;
 };
 var plhead=function(pl, pltag, opts) {
-  //console.log(pltag[1])
   opts=opts||{};
   opts.max=opts.max||1;
   var out=[];
-  for (var i=0;i<pl.length;i++) {
-     k = sortedIndex(pltag, pl[i]);
-
-     if (k>-1 && k<pltag.length) {
-      if (pltag[k]==pl[i]) {
-        out.push(pl[i]);
-      //  console.log(pl[k],pltag[i])
-        if (out.length>=opts.max) break;
+  if (pltag.length<pl.length) {
+    for (var i=0;i<pltag.length;i++) {
+       k = sortedIndex(pl, pltag[i]);
+       if (k>-1 && k<pl.length) {
+        if (pl[k]==pltag[i]) {
+          out.push(pltag[i]);
+          if (out.length>=opts.max) break;
+        }
+      }
+    }
+  } else {
+    for (var i=0;i<pl.length;i++) {
+       k = sortedIndex(pltag, pl[i]);
+       if (k>-1 && k<pltag.length) {
+        if (pltag[k]==pl[i]) {
+          out.push(pltag[k]);
+          if (out.length>=opts.max) break;
+        }
       }
     }
   }
