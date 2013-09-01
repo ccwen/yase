@@ -83,6 +83,7 @@ var newfile=function(fn){
 	ctx.slotbuffer="";
 	ctx.lastpos=0;
 	var B=this.buffer;
+	this.output.sourcefiles.push({filename:fn,vpos:ctx.vpos, size: B.length });
 	if (B.charCodeAt(0)==0xfeff || B.charCodeAt(0)==0xfffe) ctx.lastpos++;
 	while (ctx.lastpos<B.length
 		&&(this.customfunc.isBreaker(B[ctx.lastpos])
@@ -127,6 +128,7 @@ var initinverted=function(opts) {
 	console.log('Start indexing',new Date());
 	console.log('BLOCKSIZE',ctx.blocksize)
 	output.postings =  {};
+	output.sourcefiles=[];
 	ctx.postingcount = 0;
 	ctx.vpos  = 0;	
 	ctx.offset= 0; // token offset of current slot
