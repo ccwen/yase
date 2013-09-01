@@ -166,7 +166,7 @@ var packmeta=function(options,context,output) {
 	meta.version=options.version || '0.0.0';
 	
 	meta.tags=Object.keys(output.tags);
-	meta.schema=JSON.stringify(context.schema);
+	meta.schema=JSON.stringify(options.schema);
 	//TODO , support boolean type
 
 	return meta;
@@ -267,7 +267,9 @@ var Create=function(options) {
 	taghandlers.initialize.apply(this,[options]);
 	this.options.schema=this.options.schema||"TEI";
 	
-	this.loadschema(this.options.schema);
+	this.options.schema=this.loadschema(this.options.schema);
+
+
 	return this;
 }
 module.exports=Create;

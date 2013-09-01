@@ -15,6 +15,7 @@ var predefined = {
 var setschema=function(schema) {
 	var ctx=this.context;
 	//this.options.schema=schema;
+
 	ctx.schema=JSON.parse(JSON.stringify(schema));
 	for (var i in ctx.schema) {
 		var h=ctx.schema[i].handler;
@@ -47,6 +48,7 @@ var loadschema=function(S) {
 		this.setschema(stock);
 	} else if (typeof S=='object') this.setschema(S);
 	else throw 'no schema';	
+	return JSON.parse(JSON.stringify(S));
 }
 var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 	var idarr=null;
