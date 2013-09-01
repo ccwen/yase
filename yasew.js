@@ -82,6 +82,14 @@ var newfile=function(fn){
 	ctx.crlfcount=0;
 	ctx.slotbuffer="";
 	ctx.lastpos=0;
+	var B=this.buffer;
+	if (B.charCodeAt(0)==0xfeff || B.charCodeAt(0)==0xfffe) ctx.lastpos++;
+	while (ctx.lastpos<B.length
+		&&(this.customfunc.isBreaker(B[ctx.lastpos])
+		||this.customfunc.isSpaceChar(B[ctx.lastpos]))) {
+			ctx.lastpos++;
+		}
+	//console.log('start from ',ctx.lastpos)
 	ctx.totalcrlfcount+=ctx.crlfcount;
 }
 var indexbuffer=function(B,fn) {
