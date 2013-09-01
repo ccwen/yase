@@ -11,8 +11,8 @@ var isSpaceChar=function(c) {
 	return ((c.charCodeAt(0)>=0x2000 && c.charCodeAt(0)<=0x206f) 
 		|| c<=' '|| c=='?'
 		|| c=='|' || c=='~' || c=='`' || c==';' || c=='.' || c==','
-		|| c=='>' || c==':' || c=='{' || c=='}'
-		|| c=='=' || c=='@' || c=='[' || c==']'
+		|| c=='>' || c==':' || c=='}'
+		|| c=='=' || c=='@' || c==']'
 		|| c=="་" || c=="།");
 }
 var isCJK =function(c) {return ((c>=0x3000 && c<=0x9FFF) 

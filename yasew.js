@@ -83,6 +83,7 @@ var newfile=function(fn){
 	ctx.slotbuffer="";
 	ctx.lastpos=0;
 	var B=this.buffer;
+	this.output.sourcefiles.push({filename:fn,vpos:ctx.vpos, size: B.length });
 	if (B.charCodeAt(0)==0xfeff || B.charCodeAt(0)==0xfffe) ctx.lastpos++;
 	while (ctx.lastpos<B.length
 		&&(this.customfunc.isBreaker(B[ctx.lastpos])
@@ -93,7 +94,7 @@ var newfile=function(fn){
 	ctx.totalcrlfcount+=ctx.crlfcount;
 }
 var indexbuffer=function(B,fn) {
-	this.buffer=B;
+	B=this.buffer=B.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
 	var ctx=this.context;
 	newfile.apply(this,[fn]);
 	
@@ -103,7 +104,8 @@ var indexbuffer=function(B,fn) {
 		if (B[i]=='<') intag=true;
 		if (this.customfunc.isBreaker(B[i]) && !intag) {
 			while ( i+1<B.length && (this.customfunc.isBreaker(B[i+1]) 
-				|| B.charCodeAt(i+1)<=0x20) ) {
+				|| this.customfunc.isSpaceChar(B[i+1]))) {
+				//start of a slot should not be space or breaker
 				i++;
 			}
 			doslot.apply(this,[i+1]);
@@ -127,6 +129,7 @@ var initinverted=function(opts) {
 	console.log('Start indexing',new Date());
 	console.log('BLOCKSIZE',ctx.blocksize)
 	output.postings =  {};
+	output.sourcefiles=[];
 	ctx.postingcount = 0;
 	ctx.vpos  = 0;	
 	ctx.offset= 0; // token offset of current slot
@@ -217,7 +220,7 @@ var save=function(filename,opts) {
 	finalize.call(this);
 	var strencoding=opts.encoding||'utf8';
 	ydb.stringEncoding(strencoding);
-	
+	//console.log(this.output.texts)
 	if (debug) console.time('save file');
 	if (this.customfunc.postings2tree) {
 		console.log('performing postings2tree');
