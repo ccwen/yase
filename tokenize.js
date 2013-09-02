@@ -4,8 +4,8 @@
   only the first token might have leading space.
 */
 module.exports=function(s) {
-	var isCJK=require('yase').customfunc.isCJK;
-	var isSpaceChar=require('yase').customfunc.isSpaceChar;
+	var isCJK=this.customfunc.isCJK;
+	var isSpaceChar=this.customfunc.isSpaceChar;
 	var res=[];
 	var i=0, last=0; 
 	addtoken=function(now) {

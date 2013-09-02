@@ -20,7 +20,7 @@ var processtoken=function() {
 	var output=this.output;
 	var i=0;
 	while (i<ctx.token.length) if (ctx.token[i++]=='\n') this.context.crlfcount++;
-	var t=this.customfunc.normalizeToken(ctx.token);
+	var t=this.customfunc.normalizeToken.apply(this,[ctx.token]);
 	if (!output.postings[t]) {
 		output.postings[t] = [ctx.vpos];
 		ctx.postingcount++;
@@ -59,7 +59,7 @@ var doslot=function(now) {
 	ctx.ntoken=0; ctx.lastntoken=0;
 	ctx.nchar=0;  ctx.lastnchar=0;
 
-	var tokens=this.customfunc.tokenize(s);
+	var tokens=this.customfunc.tokenize.apply(this,[s]);
 	ctx.vpos=ctx.slotcount*this.context.blocksize;
 	for (var i=0;i<tokens.length;i++) {
 		ctx.token=tokens[i];

@@ -154,8 +154,8 @@ var postings2tree=function(o) {
 	return res;
 }
 var normalizeToken=function(tk) {
-	if (!isSpaceChar) isSpaceChar=require('yase').customfunc.isSpaceChar;
-	if (!isCJK) isCJK=require('yase').customfunc.isCJK;
+	if (!isSpaceChar) isSpaceChar=this.customfunc.isSpaceChar;
+	if (!isCJK) isCJK=this.customfunc.isCJK;
 	var start,i=0;
 	while (i<tk.length &&isSpaceChar(tk[i]) ) i++;
 	start=i;

@@ -47,7 +47,7 @@ var highlight=function(opts) {
 var highlighttexts=function(dm,seqarr,tofind) {
 	var R=dm.phraseSearch(tofind,{grouped:true});
 
-	var tokens=dm.customfunc.tokenize(tofind);
+	var tokens=dm.customfunc.tokenize.apply(this,[tofind]);
 	var phraselength=tokens.length;
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
@@ -202,29 +202,41 @@ var getText=function(slot,opts) {
 	}
 
 	var out=[];
-	if (opts.tokentag || opts.slottag) {
+	if (opts.tokentag || opts.slotarray || opts.tokenarray) {
 		if (typeof slot=='number' || typeof slot=='string') slot=[parseInt(slot)];
 		if (typeof t=='string') t=[t];
 		var blocksize = 2 << (this.meta.blockshift -1);
 		for (var j in t) {
-			var T="";
+			var T="",TK=[];
 			var tokenoffset=0;
-			if (opts.tokentag) {
+			if (opts.tokentag || opts.tokenarray) {
 			 	var tokenize=this.customfunc.tokenize;
-			 	var tokens=tokenize(t[j]);
+			 	var tokens=tokenize.apply(this,[t[j]]);
 			 	for (var i in tokens) {
 			 		var tk=tokens[i];
 			 		//if (tk=='\n' && opts.addbr) T+="<br/>";
 			 		if (!tokens[i][0]!='<') {
 			 			tokenoffset++;
 				 		//var vpos=slot[j]*blocksize+tokenoffset;
-				 		T+='<tk n="'+tokenoffset+'">'+tk+'</tk>';
+				 		if (opts.tokenarray) {
+				 			TK.push(tk);
+				 		} else {
+				 			T+='<tk n="'+tokenoffset+'">'+tk+'</tk>';	
+				 		}
+				 		
 				 	} else T+=tk;
 			 	}
 			} else T=t[j];
-			if (opts.slottag) out.push('<slot n="'+slot[j]+'">'+T+'</slot>');
+			if (opts.slotarray) {
+				if (opts.tokenarray) out.push(TK)
+				else out.push(T);
+			} else {
+				if (opts.slottag) out.push('<slot n="'+slot[j]+'">'+T+'</slot>');	
+			}
+			
 		}
-		return out.join("");
+		if (opts.slotarray) return out;
+		else return out.join("");
 
 	 } else {
 	 	if (typeof t!='string') return t.join(""); else return t;
@@ -366,7 +378,7 @@ var fetchPage=function(tagname,seq,opts) {
 	return r;
 }
 
-var yase_use = function(fn) { 
+var yase_use = function(fn,opts) { 
 	var db = null;
 	var se_preload=function(instance) {
 		if (instance.yaseloaded) return;
@@ -404,7 +416,7 @@ var yase_use = function(fn) {
 	}
 
 	if (fn) {
-		db = require('yadb').api().open(fn); // make use of yadb db pool 
+		db = require('yadb').api().open(fn,opts); // make use of yadb db pool 
 		se_preload(db);
 	} else throw 'missing filename';
 
