@@ -18,7 +18,7 @@ var getPostingById=function(id) {
 	return r;
 }
 var highlight=function(opts) {
-	var tokens=opts.tokenize(opts.text);
+	var tokens=opts.tokenize.apply(this,[opts.text]);
 	var i=0,j=0,last=0,voff=0,now=0;
 	var output='';
 	
@@ -44,14 +44,14 @@ var highlight=function(opts) {
 	return output;
 }
 //return highlighted texts given a raw hits
-var highlighttexts=function(dm,seqarr,tofind) {
-	var R=dm.phraseSearch(tofind,{grouped:true});
+var highlighttexts=function(seqarr,tofind) {
+	var R=this.phraseSearch(tofind,{grouped:true});
 
-	var tokens=dm.customfunc.tokenize.apply(this,[tofind]);
+	var tokens=this.customfunc.tokenize.apply(this,[tofind]);
 	var phraselength=tokens.length;
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
-		var t=dm.getText(parseInt(seqarr));
+		var t=this.getText(parseInt(seqarr));
 		if (R[seqarr]) return highlight({ text: t , hits: R[seqarr]} );
 		else return t;
 	} else {
@@ -59,30 +59,30 @@ var highlighttexts=function(dm,seqarr,tofind) {
 		for (var i in seqarr) { //TODO : fix overflow slot
 			var seq=seqarr[i];
 			var hits=R[seq];
-			var t=dm.getText(seq);
-			var hopts={ text: t , hits: hits, tokenize:dm.customfunc.tokenize,phraselength:phraselength};
-			if (hits) out+= highlight.apply(dm, [ hopts]);
+			var t=this.getText(seq);
+			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,phraselength:phraselength};
+			if (hits) out+= highlight.apply(this, [ hopts]);
 			else out+=t;
 		}
 		return out;
 	}
 }
-var highlightresult=function(dm,R,phraselength,nohighlight) {
+var highlightresult=function(R,phraselength,nohighlight) {
 	var rescount=0;
-	var blocksize = 2 << (dm.meta.blockshift -1);	
+	var blocksize = 2 << (this.meta.blockshift -1);	
 	//console.log('highlightresult',R)
 	var lasti='', hits=[],addition=0;
 	var output={};
 	/* TODO , same sentence in multiple slot render once */
 	for (var i in R) {
 		var nslot=parseInt(i);
-		var text=dm.getText(nslot);
+		var text=this.getText(nslot);
 		var hits=R[i];
 		addition=0;
 
 		while (!text && nslot) {
 			nslot--;
-			text=dm.getText(nslot);
+			text=this.getText(nslot);
 			addition+=blocksize;
 		}
 	
@@ -91,12 +91,12 @@ var highlightresult=function(dm,R,phraselength,nohighlight) {
 		if (nohighlight) {
 			var h=text;
 		} else {
-			var h=highlight({
-				tokenize:dm.customfunc.tokenize,
+			var h=highlight.apply(this,[{
+				tokenize:this.customfunc.tokenize,
 				hits:hits,
 				text:text,
 				phraselength:phraselength
-			});
+			}]);
 
 		}
 		output[nslot]=h;
@@ -108,7 +108,7 @@ var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
 	if (!tokenize) throw 'no tokenizer';
 	var postings=[];
-	var tokens=tokenize(tofind);
+	var tokens=tokenize.apply(this,[tofind]);
 	var g=null,raw=null;
 	var tag=opts.tag||"";
 
@@ -168,7 +168,7 @@ var phraseSearch=function(tofind,opts) {
 	if (profile) console.time('highlight')
 	var R="";
 	if (opts.showtext) {
-		R=highlightresult(this,g,tokens.length,!opts.highlight);
+		R=highlightresult.apply(this,[g,tokens.length,!opts.highlight]);
 	}
 	if (profile) console.timeEnd('highlight');
 	if (opts.array || opts.closesttag) {
@@ -195,7 +195,7 @@ var getKeys=function(id) {
 var getText=function(slot,opts) {
 	if (opts && opts.tofind) {
 	 	//console.log('text with tofind',opts.tofind);
-		t=highlighttexts(this, slot,opts.tofind);
+		t=highlighttexts.apply(this, [slot,opts.tofind]);
 	} else {
 	 	var t=this.customfunc.getText(this.getdb(),slot,opts);	 	
 	 	if (!opts) { if (typeof t!='string') return t.join(""); else return t; }
