@@ -100,9 +100,11 @@ var getBlob=function(opts) {
 	return se.get(path);
 }
 var closestTag=function(opts) {
+	if (!opts) return null;
 	var se=yase(opts.db);
 	var output=[];
 	var slots=opts.slots; //default is an array
+	opts.slot=parseInt(opts.slot)
 	//console.time('closestTag')
 	if (typeof opts.slot=='undefined') {
 		if (typeof opts.vpos=='object') {
@@ -112,6 +114,7 @@ var closestTag=function(opts) {
 		}
 	}
 	if (typeof opts.slot=='number') slots=[opts.slot];
+	if (!slots) return [];
 	for (var i=0;i<slots.length;i++) {
 		var tags=se.closestTag(opts.tag, slots[i]);
 		if (!(tags instanceof Array)) {
