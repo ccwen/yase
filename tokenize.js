@@ -17,7 +17,6 @@ module.exports=function(s) {
 	}
 	parseIDS=function(now) {
 		var count=0;
-		debugger;
 		while (count!=1 && now<s.length) {
 			c=s.charCodeAt(now);
 			if ( c>=0x2ff0 && c<=0x2fff) {

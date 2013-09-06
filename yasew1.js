@@ -434,7 +434,6 @@ var save=function(filename,opts) {
 		var enc='variable';
 		if (i=='postings') {
 			enc='delta';
-			debugger;
 		}
 		ydb.save(this.output[i], i, {integerEncoding:enc});	
 	}
