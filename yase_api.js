@@ -62,8 +62,22 @@ var findTag=function(opts) {
 	var se=yase(opts.db);
 	var o=opts;
 	if (opts.selector) o=se.parseSelector(opts.selector);
-	var t=se.findTag(o.tag,o.attribute,o.value);
-	return t;
+	if (typeof o.value=='object') {
+		var t=[];
+		for (var i in o.value) {
+			t.push(se.findTag(o.tag,o.attribute,o.value[i]));
+		}
+		return t;
+	} else {
+		var t=se.findTag(o.tag,o.attribute,o.value);	
+		return t;
+	}
+	
+}
+var getTagInRange=function(opts) {
+	var se=yase(opts.db);
+	var res=se.getTagInRange(opts.start,opts.end,opts.tag,opts);
+	return res;
 }
 var getTextRange=function(opts) {
 	var se=yase(opts.db);
@@ -147,6 +161,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	getTextByTag:gettextbytag,
 	getTagAttr:gettagattr,
 	getTextRange:getTextRange,
+	getTagInRange:getTagInRange,
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,
 	closestTag:closestTag,

@@ -9,7 +9,7 @@ var binarysearch=require('./binarysearch')
 
 var getPostingById=function(id) {
 	if (this.customfunc.token2tree) {
-		var idarr=this.customfunc.token2tree(id);
+		var idarr=this.customfunc.token2tree.apply(this,[id]);
 	} else {
 		var idarr=[id];
 	}
@@ -197,7 +197,7 @@ var getText=function(slot,opts) {
 	 	//console.log('text with tofind',opts.tofind);
 		t=highlighttexts.apply(this, [slot,opts.tofind]);
 	} else {
-	 	var t=this.customfunc.getText(this.getdb(),slot,opts);	 	
+	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
 	 	if (!opts) { if (typeof t!='string') return t.join(""); else return t; }
 	}
 
@@ -258,9 +258,28 @@ var parseSelector=function(sel) {  // tag[attr=value]
           if (value[value.length-1]===']') value=value.substring(0,value.length-1);
           return {tag:tagname,attribute:attributename,value:value};
 };
+var getTagInRange=function(start,end,tagname,opts) {
+	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
+	var startvpos=start*this.meta.blocksize;
+	var endvpos=end*this.meta.blocksize;
+	var out=[];
+	for (var i=0;i<vpos.length;i++) {
+		if (vpos[i]>=startvpos && vpos[i]<endvpos) {
+			var T=this.getTag(tagname,i);
+			T.values={};
+			if (opts.attributes) for (var k in opts.attributes) {
+				var attr=opts.attributes[k];
+				var v=this.getTagAttr(tagname , i, attr);
+				T.values[attr]=v;
+			}
+			out.push(T);
+		}
+	}
+	return out;
+
+}
 
 var getTextByTag=function(opts) {
-	var db=this.getdb();
 	var maxslot=opts.maxslot || 1000;
 	if (typeof opts.ntag !='undefined') {
 		tagseq=parseInt(opts.ntag);
@@ -274,7 +293,7 @@ var getTextByTag=function(opts) {
 			}
 		}
 		var par=['tags',opts.tag,opts.attribute+'='].concat(opts.value);
-		var tagseq=db.get(par) ;
+		var tagseq=this.get(par) ;
 	}
 
 	var t=this.getTag(opts.tag,tagseq);
@@ -292,16 +311,16 @@ var getTextByTag=function(opts) {
 }	
 
 var getTag=function(tagname,seq) {
-	return this.customfunc.getTag(this.getdb(),tagname,seq);
+	return this.customfunc.getTag.apply(this,[tagname,seq]);
 }
 var getTagPosting=function(tagname) {
-	return this.customfunc.getTagPosting(this.getdb(),tagname);
+	return this.customfunc.getTagPosting.apply(this,[tagname]);
 }
 var findTag=function(tagname,attributename,value) {
-	return this.customfunc.findTag(this.getdb(),tagname,attributename,value);
+	return this.customfunc.findTag.apply(this,[tagname,attributename,value]);
 }
 var getTagAttr=function(tagname,ntag,attributename) {
-	return this.customfunc.getTagAttr(this.getdb(),tagname,ntag,attributename);
+	return this.customfunc.getTagAttr.apply(this,[tagname,ntag,attributename]);
 }
 var closestTag=function(tagname,nslot,opts) {
 	if (typeof tagname =='string') tagname=[tagname];
@@ -310,7 +329,7 @@ var closestTag=function(tagname,nslot,opts) {
 		var tn=tagname[i];
 		sel=parseSelector(tn);
 		if (!sel) { //plain tagname
-			var vposarr= this.getdb().get(['tags',tn,'_vpos'],true);
+			var vposarr= this.get(['tags',tn,'_vpos'],true);
 			if (!vposarr) throw 'undefiend TAG '+tn;
 			var c=binarysearch.closest( vposarr,nslot*this.meta.blocksize );
 			var tag=this.getTag(tn,c);
@@ -318,10 +337,10 @@ var closestTag=function(tagname,nslot,opts) {
 			output.push( tag);	
 		} else { // attr=value selector
 			//var slots= this.getdb().get(['tags',sel.tag,'slot'],true);
-			var vposarr=this.getdb().get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
+			var vposarr=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
 			var c=binarysearch.closest( vposarr, nslot*this.meta.blocksize);
 			//convert to ntag
-			var ntags=this.getdb().get(['tags',sel.tag,sel.attribute+'='+sel.value,'ntag']);
+			var ntags=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'ntag']);
 			var tag=this.getTag(sel.tag,ntags[c]);
 			tag.ntag=ntags[c];
 			output.push( tag );
@@ -345,13 +364,13 @@ var getTextRange=function(start,end,opts) {
 	return this.getText(slots,opts);
 }
 var genToc=function(toctree,opts) {
-	var db=this.getdb();
+	//var db=this.getdb();
 	var start=opts.start || 0;
-	var end=opts.end || db.meta.slotcount;
+	var end=opts.end || this.meta.slotcount;
 
 	var output=[];
 	for (var i in toctree) {
-		var vposarr=db.get(['tags',toctree[i],'_vpos']);
+		var vposarr=this.get(['tags',toctree[i],'_vpos']);
 		for (var j in vposarr) {
 			output.push( [ 1+parseInt(i), vposarr[j]])	
 		}
@@ -403,6 +422,7 @@ var yase_use = function(fn,opts) {
 		instance.phraseSearch=phraseSearch;
 		instance.getPostingById=getPostingById;
 		instance.closestTag=closestTag;
+		instance.getTagInRange=getTagInRange;
 		instance.genToc=genToc;
 		instance.phrasecache={};
 		instance.phrasecache_raw={};

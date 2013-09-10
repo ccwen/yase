@@ -18,27 +18,27 @@ var isSpaceChar=function(c) {
 var isCJK =function(c) {return ((c>=0x3000 && c<=0x9FFF) 
 	|| (c>=0xD800 && c<0xDFFF) || (c>=0x2FF0 && c<0x2FFF) || (c>=0xFF00) ) ;}
 
-var getText=function(db,seq,opts) {
+var getText=function(seq,opts) {
 	if (!opts) opts={};
-	var slotperbatch=db.get(['meta','slotperbatch']);
+	var slotperbatch=this.get(['meta','slotperbatch']);
 	if (typeof seq=='number') {
 		var batch=Math.floor(seq / slotperbatch);
-		return db.get(['texts',batch, seq % slotperbatch]);
+		return this.get(['texts',batch, seq % slotperbatch]);
 	} else {
 		var r=[];
 		for (var i in seq) {
 			var batch=Math.floor(seq[i] / slotperbatch);
-			var t=db.get(['texts',batch, seq[i] % slotperbatch]);
+			var t=this.get(['texts',batch, seq[i] % slotperbatch]);
 			r.push(t);
 		}
 		return r;
 	}
 }	
-var getTag=function(db,tagname,seq) {
-	var vpos= db.get(['tags',tagname,'_vpos',seq]);
-	var slot= vpos >>db.meta.blockshift;
-	var offset= vpos% db.meta.blocksize;
-	var head= db.get(['tags',tagname,'_head',seq]);
+var getTag=function(tagname,seq) {
+	var vpos= this.get(['tags',tagname,'_vpos',seq]);
+	var slot= vpos >>this.meta.blockshift;
+	var offset= vpos% this.meta.blocksize;
+	var head= this.get(['tags',tagname,'_head',seq]);
 	
 	var r={};
 	if (typeof vpos!=='undefined') r.vpos=vpos;
@@ -48,10 +48,10 @@ var getTag=function(db,tagname,seq) {
 	r.name=tagname;
 	return r;
 }
-var getTagPosting=function(db,tagname) {
+var getTagPosting=function(tagname) {
 	//var slot= db.get(['tags',tagname,'_slot'],true);
 	//var offset= db.get(['tags',tagname,'_offset'],true);
-	var vpos= db.get(['tags',tagname,'_vpos'],true);
+	var vpos= this.get(['tags',tagname,'_vpos'],true);
 	/*
 	var out=[];
 	var shift=2 << (db.meta.blockshift - 1);
@@ -61,22 +61,22 @@ var getTagPosting=function(db,tagname) {
 	*/
 	return vpos;
 }
-var getTagAttr=function(db,tagname,ntag,attributename) {
+var getTagAttr=function(tagname,ntag,attributename) {
 	var par=['tags',tagname,attributename,ntag];
-	return db.get(par) ;
+	return this.get(par) ;
 }
-var findTag=function(db,tagname,attributename,value) {
+var findTag=function(tagname,attributename,value) {
 	var par=['tags',tagname,attributename+'='].concat(value.split('.'));
 	var tag={};
-	tag.ntag=db.get(par,true);
+	tag.ntag=this.get(par,true);
 	if (typeof tag.ntag=='undefined') return {};//not found;
 	if (typeof tag.ntag=='number') {
-		tag.vpos= db.get(['tags',tagname,'_vpos',tag.ntag]);
-		tag.slot= tag.vpos >> db.meta.blockshift;
-		tag.offset= tag.vpos % db.meta.blocksize;
+		tag.vpos= this.get(['tags',tagname,'_vpos',tag.ntag]);
+		tag.slot= tag.vpos >> this.meta.blockshift;
+		tag.offset= tag.vpos % this.meta.blocksize;
 
-		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
-		tag.text=db.getText(tag.slot);
+		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);
+		tag.text=this.getText(tag.slot);
 		return tag;
 	}
 
@@ -86,13 +86,13 @@ var findTag=function(db,tagname,attributename,value) {
 		var tag={};
 		tag.ntag=tags[i];
 
-		tag.vpos= db.get(['tags',tagname,'_vpos',tag.ntag]);
-		tag.slot= tag.vpos >> db.meta.blockshift;
-		tag.offset= tag.vpos % db.meta.blocksize;
+		tag.vpos= this.get(['tags',tagname,'_vpos',tag.ntag]);
+		tag.slot= tag.vpos >> this.meta.blockshift;
+		tag.offset= tag.vpos % this.meta.blocksize;
 		//tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
 		//tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
-		tag.head= db.get(['tags',tagname,'_head',tag.ntag]);
-		tag.text=db.getText(tag.slot);
+		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);
+		tag.text=this.getText(tag.slot);
 		out.push(tag)
 	}
 	return  out;
