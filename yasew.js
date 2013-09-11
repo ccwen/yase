@@ -66,9 +66,13 @@ var doslot=function(now) {
 		if (ctx.token[0]=='<') { //do not allow space at the beginning of file
 			processtag.call(this);
 		} else {
+			if (ctx.token[ctx.token.length-1]=='>') {
+				this.warnbuilding('invalid token '+ctx.token);
+			}
 			processtoken.call(this);
 			ctx.offset++;
 			ctx.vpos++;
+			ctx.tokencount++;
 		}
 		ctx.nchar+=ctx.token.length;
 		ctx.ntoken=i;
@@ -139,6 +143,7 @@ var initialize=function(options,context,output) {
 	options=options||{};
 	context.starttime=new Date();
 	context.slotcount=0;
+	context.tokencount=0; //non tag token in database
 	context.overflow={};
 	context.totalcrlfcount=0;
 	context.extraslot=0;	
@@ -161,6 +166,7 @@ var packmeta=function(options,context,output) {
 	meta.builddatetime=(new Date()).toString();
 	meta.buildduration=new Date()-context.starttime;
 	meta.slotcount=context.slotcount;
+	meta.tokencount=context.tokencount;
 	meta.slotperbatch=options.slotperbatch;
 	meta.blockshift=options.blockshift;
 	meta.version=options.version || '0.0.0';
@@ -206,7 +212,7 @@ var finalize=function() {
 }
 
 var packcustomfunc=function() {
-	if (!this.customfunc) abortbuilding('no customfunc');
+	if (!this.customfunc) abortbuilding.apply(this,['no customfunc']);
 	var customfunc={};
 	for (var i in this.customfunc) {
 		customfunc[i]='return '+this.customfunc[i].toString();
@@ -245,6 +251,11 @@ var abortbuilding=function(message) {
 	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount)
 	throw message;
 }
+var warnbuilding=function(message) {
+	var ctx=this.context;
+	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount)
+	console.log(message);
+}
 
 var Create=function(options) {
 
@@ -259,6 +270,7 @@ var Create=function(options) {
 	this.setcustomfunc(require('./yasecustom'));
 	this.save=save;
 	this.abortbuilding=abortbuilding;
+	this.warnbuilding=warnbuilding;
 	this.addslottext=addslottext;
 	this.finalize=finalize;
 
