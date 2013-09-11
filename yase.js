@@ -319,6 +319,10 @@ var getTagPosting=function(tagname) {
 var findTag=function(tagname,attributename,value) {
 	return this.customfunc.findTag.apply(this,[tagname,attributename,value]);
 }
+var findTagBySelector=function(selector) {
+	var T=parseSelector(selector);
+	return this.customfunc.findTag.apply(this,[T.tag,T.attribute,T.value]);
+}
 var getTagAttr=function(tagname,ntag,attributename) {
 	return this.customfunc.getTagAttr.apply(this,[tagname,ntag,attributename]);
 }
@@ -416,6 +420,7 @@ var yase_use = function(fn,opts) {
 		instance.getTag=getTag;
 		instance.getTagPosting=getTagPosting;
 		instance.findTag=findTag;
+		instance.findTagBySelector=findTagBySelector;
 		instance.getTagAttr=getTagAttr;
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
