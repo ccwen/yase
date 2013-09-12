@@ -16,6 +16,12 @@ var getfiles=function( filelist , maxfile) {
 	}
 	return output;
 }
+var outback = function (s) {
+    while (s.length < 70) s += ' ';
+    var l = s.length; 
+    for (var i = 0; i < l; i++) s += String.fromCharCode(8);
+    process.stdout.write(s);
+}
 module.exports=function( config ) {
 	if (!config.input) {
 		console.warn('missing input file');
@@ -50,6 +56,7 @@ module.exports=function( config ) {
 	ydb.setcustomfunc( customfunc );	
 
     for (var i in files) {
+    	outback(files[i]);
        	ydb.indexbuffer(fs.readFileSync(files[i],config.encoding),  files[i]);
     }
 
