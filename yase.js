@@ -198,7 +198,7 @@ var getText=function(slot,opts) {
 		t=highlighttexts.apply(this, [slot,opts.tofind]);
 	} else {
 	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
-	 	if (!opts) { if (typeof t!='string') return t.join(""); else return t; }
+	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
 	}
 
 	var out=[];
