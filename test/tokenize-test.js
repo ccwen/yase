@@ -39,6 +39,7 @@ vows.describe('splitter test suite').addBatch({
             assert.equal(6,tokens.length,'length');
             var normalized=topic.normalizeToken(tokens[2])
             assert.equal("⿱⿰日月皿",normalized,'normalized');
+            //assert.equal("𠀀",token[3],'normalized');
         }
     }
 

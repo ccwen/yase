@@ -8,14 +8,14 @@ module.exports=function(s) {
 	var isSpaceChar=this.customfunc.isSpaceChar;
 	var res=[];
 	var i=0, last=0; 
-	addtoken=function(now) {
+	var addtoken=function(now) {
 		if (now>last) {
 			var tk=s.substring(last,now);
 			res.push(tk);
 			last=now;
 		}
 	}
-	parseIDS=function(now) {
+	var parseIDS=function(now) {
 		var count=0;
 		while (count!=1 && now<s.length) {
 			c=s.charCodeAt(now);

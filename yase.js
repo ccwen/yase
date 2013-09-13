@@ -239,7 +239,7 @@ var getText=function(slot,opts) {
 		else return out.join("");
 
 	 } else {
-	 	if (typeof t!='string') return t.join(""); else return t;
+	 	if (typeof t=='object') return t.join(""); else return t;
 	 }
 }
 
