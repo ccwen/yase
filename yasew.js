@@ -168,7 +168,7 @@ var packmeta=function(options,context,output) {
 	meta.slotcount=context.slotcount;
 	meta.tokencount=context.tokencount;
 	meta.slotperbatch=options.slotperbatch;
-	meta.blockshift=options.blockshift;
+	meta.blockshift=context.blockshift; //this might be changed
 	meta.version=options.version || '0.0.0';
 	
 	meta.tags=Object.keys(output.tags);
