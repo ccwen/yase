@@ -37,7 +37,7 @@ var highlight=function(opts) {
 			last=i;
 			j++;
 		}
-		if (tokens[i][0]!='<') voff++;
+		if (tokens[i] && tokens[i][0]!='<') voff++;
 		i++;
 	}
 	while (last<tokens.length) output+= tokens[last++];
