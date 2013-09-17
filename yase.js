@@ -122,7 +122,9 @@ var phraseSearch=function(tofind,opts) {
 		if (profile) console.time('get posting');
 		for (var i in tokens) {
 			if (tokens[i].trim()[0]=='<') continue;
-			var posting=this.getPostingById(tokens[i]);
+			var t=this.customfunc.normalizeToken?
+				this.customfunc.normalizeToken.apply(this,[tokens[i]]):tokens[i];
+			var posting=this.getPostingById(t);
 			postings.push(posting);
 		}
 		if (profile) console.timeEnd('get posting');
