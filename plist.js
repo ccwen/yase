@@ -13,12 +13,12 @@ var unpack = function (ar) { // unpack variable length integer list
   } while (i < ar.length);
   return r;
 }
-var groupbyblock = function (ar, blockshift, opts) {
+var groupbyblock = function (ar, slotshift, opts) {
   if (!ar.length)
 	return {};
   
-  blockshift = blockshift || 16;
-  var g = Math.pow(2,blockshift);
+  slotshift = slotshift || 16;
+  var g = Math.pow(2,slotshift);
   var i = 0;
   var r = {};
   var groupcount=0;

@@ -69,7 +69,7 @@ var highlighttexts=function(seqarr,tofind) {
 }
 var highlightresult=function(R,phraselength,nohighlight) {
 	var rescount=0;
-	var blocksize = 2 << (this.meta.blockshift -1);	
+	var slotsize = 2 << (this.meta.slotshift -1);	
 	//console.log('highlightresult',R)
 	var lasti='', hits=[],addition=0;
 	var output={};
@@ -83,7 +83,7 @@ var highlightresult=function(R,phraselength,nohighlight) {
 		while (!text && nslot) {
 			nslot--;
 			text=this.getText(nslot);
-			addition+=blocksize;
+			addition+=slotsize;
 		}
 	
 		if (addition) hits=hits.map( function(j) {return addition+j});
@@ -134,7 +134,7 @@ var phraseSearch=function(tofind,opts) {
 		if (profile) console.time('group block')
 		if (opts.ungroup) return raw;
 		//console.log(raw)
-		var g=plist.groupbyblock(raw, this.meta.blockshift);
+		var g=plist.groupbyblock(raw, this.meta.slotshift);
 		if (profile) console.timeEnd('group block')		
 		if (this.phrasecache) this.phrasecache[tofind]=g;
 		if (this.phrasecache_raw) this.phrasecache_raw[tofind]=raw;
@@ -146,7 +146,7 @@ var phraseSearch=function(tofind,opts) {
 		//if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
 		
 		raw=plist.plhead(raw, pltag );
-		g=plist.groupbyblock(raw, this.meta.blockshift);
+		g=plist.groupbyblock(raw, this.meta.slotshift);
 	}
 
 	//trim output
@@ -207,7 +207,7 @@ var getText=function(slot,opts) {
 	if (opts.tokentag || opts.slotarray || opts.tokenarray) {
 		if (typeof slot=='number' || typeof slot=='string') slot=[parseInt(slot)];
 		if (typeof t=='string') t=[t];
-		var blocksize = 2 << (this.meta.blockshift -1);
+		var slotsize = 2 << (this.meta.slotshift -1);
 		for (var j in t) {
 			var T="",TK=[];
 			var tokenoffset=0;
@@ -219,7 +219,7 @@ var getText=function(slot,opts) {
 			 		//if (tk=='\n' && opts.addbr) T+="<br/>";
 			 		if (!tokens[i][0]!='<') {
 			 			tokenoffset++;
-				 		//var vpos=slot[j]*blocksize+tokenoffset;
+				 		//var vpos=slot[j]*slotsize+tokenoffset;
 				 		if (opts.tokenarray) {
 				 			TK.push(tk);
 				 		} else {
@@ -262,8 +262,8 @@ var parseSelector=function(sel) {  // tag[attr=value]
 };
 var getTagInRange=function(start,end,tagname,opts) {
 	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
-	var startvpos=start*this.meta.blocksize;
-	var endvpos=end*this.meta.blocksize;
+	var startvpos=start*this.meta.slotsize;
+	var endvpos=end*this.meta.slotsize;
 	var out=[];
 	for (var i=0;i<vpos.length;i++) {
 		if (vpos[i]>=startvpos && vpos[i]<endvpos) {
@@ -337,14 +337,14 @@ var closestTag=function(tagname,nslot,opts) {
 		if (!sel) { //plain tagname
 			var vposarr= this.get(['tags',tn,'_vpos'],true);
 			if (!vposarr) throw 'undefiend TAG '+tn;
-			var c=binarysearch.closest( vposarr,nslot*this.meta.blocksize );
+			var c=binarysearch.closest( vposarr,nslot*this.meta.slotsize );
 			var tag=this.getTag(tn,c);
 			tag.ntag=c;
 			output.push( tag);	
 		} else { // attr=value selector
 			//var slots= this.getdb().get(['tags',sel.tag,'slot'],true);
 			var vposarr=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
-			var c=binarysearch.closest( vposarr, nslot*this.meta.blocksize);
+			var c=binarysearch.closest( vposarr, nslot*this.meta.slotsize);
 			//convert to ntag
 			var ntags=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'ntag']);
 			var tag=this.getTag(sel.tag,ntags[c]);
@@ -415,7 +415,7 @@ var yase_use = function(fn,opts) {
 			instance.customfunc[i]=r();
 		}
 		instance.meta.schema=JSON.parse(instance.meta.schema);
-		instance.meta.blocksize=2<<(instance.meta.blockshift -1);
+		instance.meta.slotsize=2<<(instance.meta.slotshift -1);
 		//augment interface
 		instance.getToc=getToc;
 		instance.getText=getText;

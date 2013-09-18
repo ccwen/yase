@@ -1,7 +1,7 @@
 ﻿var addslot=function(sentencecount,s) {
 	var splitted=this.splitter(s);
 	var tokens=splitted.tokens;
-	this.vpos=sentencecount * this.blocksize ; 
+	this.vpos=sentencecount * this.slotsize ; 
 	for (var i=0;i<tokens.length;i++) {
 		var t=this.normalize(tokens[i]);
 		if (!t || splitted.skips[i]) continue; 
@@ -49,12 +49,12 @@
  }
 var create=function(opts) {
 	var handle={};
-	handle.blockshift=opts.blockshift || 5 ; //default blocksize 32
-	if (handle.blockshift>10) {
-		console.warn('max block size is 1024, reduce your blockshift setting');
-		handle.blockshift=10;
+	handle.slotshift=opts.slotshift || 5 ; //default slotsize 32
+	if (handle.slotshift>10) {
+		console.warn('max block size is 1024, reduce your slotshift setting');
+		handle.slotshift=10;
 	}
-	handle.blocksize=2 << (handle.blockshift - 1);//Math.pow(2,handle.blockshift);
+	handle.slotsize=2 << (handle.slotshift - 1);//Math.pow(2,handle.slotshift);
 	handle.postings =  {};
 	handle.postingcount =  0;
 	handle.vpos =  1;

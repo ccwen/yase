@@ -1,5 +1,5 @@
 var debug=false;
-var DEFAULTBLOCKSHIFT=5;
+var DEFAULTSLOTSHIFT=5;
 
 var taghandlers=require('./taghandlers');
 var Yadb=require('yadb');
@@ -49,7 +49,7 @@ var addslottext=function() {
 	while (extraslot--) output.texts[slotgroup].push(''); //insert null slot
 	ctx.lastntoken=ctx.ntoken;
 	ctx.lastnchar=ctx.nchar;
-	ctx.vpos=ctx.slotcount*this.context.blocksize;
+	ctx.vpos=ctx.slotcount*this.context.slotsize;
 }
 var doslot=function(now) {
 	var ctx=this.context;
@@ -60,7 +60,7 @@ var doslot=function(now) {
 	ctx.nchar=0;  ctx.lastnchar=0;
 
 	var tokens=this.customfunc.tokenize.apply(this,[s]);
-	ctx.vpos=ctx.slotcount*this.context.blocksize;
+	ctx.vpos=ctx.slotcount*this.context.slotsize;
 	for (var i=0;i<tokens.length;i++) {
 		ctx.token=tokens[i];
 		if (ctx.token[0]=='<') { //do not allow space at the beginning of file
@@ -124,14 +124,14 @@ var initinverted=function(opts) {
 	var ctx=this.context;
 	var output=this.output;
 	opts=opts||{};
-	ctx.blockshift=opts.blockshift || DEFAULTBLOCKSHIFT ; //default blocksize 32
-	if (ctx.blockshift>10) {
-		console.warn('max block size is 1024, reduce your blockshift setting');
-		ctx.blockshift=10;
+	ctx.slotshift=opts.slotshift || DEFAULTSLOTSHIFT ; //default slotsize 32
+	if (ctx.slotshift>10) {
+		console.warn('max block size is 1024, reduce your slotshift  setting');
+		ctx.slotshift=10;
 	}
-	ctx.blocksize=2 << (ctx.blockshift - 1);//Math.pow(2,handle.blockshift);
+	ctx.slotsize=2 << (ctx.slotshift - 1);//Math.pow(2,handle.slotshift);
 	console.log('Start indexing',new Date());
-	console.log('BLOCKSIZE',ctx.blocksize)
+	console.log('SLOTSIZE',ctx.slotsize)
 	output.postings =  {};
 	output.sourcefiles=[];
 	ctx.postingcount = 0;
@@ -148,10 +148,10 @@ var initialize=function(options,context,output) {
 	context.totalcrlfcount=0;
 	context.extraslot=0;	
 	options.slotperbatch=options.slotperbatch||256;
-	options.blockshift=options.blockshift||DEFAULTBLOCKSHIFT;
+	options.slotshift=options.slotshift||DEFAULTSLOTSHIFT;
 	context.slotperbatch=options.slotperbatch;
 	output.meta=output.meta||{};
-	context.maxslottoken = 2 << (options.blockshift -1);
+	context.maxslottoken = 2 << (options.slotshift -1);
 	if (typeof output.texts=='undefined') { //first file
 		output.texts=[];	
 	}
@@ -168,7 +168,7 @@ var packmeta=function(options,context,output) {
 	meta.slotcount=context.slotcount;
 	meta.tokencount=context.tokencount;
 	meta.slotperbatch=options.slotperbatch;
-	meta.blockshift=context.blockshift; //this might be changed
+	meta.slotshift=context.slotshift; //this might be changed
 	meta.version=options.version || '0.0.0';
 	
 	meta.tags=Object.keys(output.tags);

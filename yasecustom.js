@@ -36,8 +36,8 @@ var getText=function(seq,opts) {
 }	
 var getTag=function(tagname,seq) {
 	var vpos= this.get(['tags',tagname,'_vpos',seq]);
-	var slot= vpos >>this.meta.blockshift;
-	var offset= vpos% this.meta.blocksize;
+	var slot= vpos >>this.meta.slotshift;
+	var offset= vpos% this.meta.slotsize;
 	var head= this.get(['tags',tagname,'_head',seq]);
 	
 	var r={};
@@ -54,7 +54,7 @@ var getTagPosting=function(tagname) {
 	var vpos= this.get(['tags',tagname,'_vpos'],true);
 	/*
 	var out=[];
-	var shift=2 << (db.meta.blockshift - 1);
+	var shift=2 << (db.meta.slotshift - 1);
 	for (var i=0;i<slot.length;i++) {
 		out.push(shift*slot[i] + offset[i]);
 	}
@@ -72,8 +72,8 @@ var findTag=function(tagname,attributename,value) {
 	if (typeof tag.ntag=='undefined') return {};//not found;
 	if (typeof tag.ntag=='number') {
 		tag.vpos= this.get(['tags',tagname,'_vpos',tag.ntag]);
-		tag.slot= tag.vpos >> this.meta.blockshift;
-		tag.offset= tag.vpos % this.meta.blocksize;
+		tag.slot= tag.vpos >> this.meta.slotshift;
+		tag.offset= tag.vpos % this.meta.slotsize;
 
 		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);
 		tag.text=this.getText(tag.slot);
@@ -87,8 +87,8 @@ var findTag=function(tagname,attributename,value) {
 		tag.ntag=tags[i];
 
 		tag.vpos= this.get(['tags',tagname,'_vpos',tag.ntag]);
-		tag.slot= tag.vpos >> this.meta.blockshift;
-		tag.offset= tag.vpos % this.meta.blocksize;
+		tag.slot= tag.vpos >> this.meta.slotshift;
+		tag.offset= tag.vpos % this.meta.slotsize;
 		//tag.slot= db.get(['tags',tagname,'_slot',tag.ntag]);
 		//tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
 		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);

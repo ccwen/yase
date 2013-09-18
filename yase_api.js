@@ -17,7 +17,7 @@ var fillText=function(opts) {
 	var se=yase(opts.db);
 	var output={};
 	if (typeof opts.slots=='undefined' && typeof opts.vpos!='undefined'){
-		opts.slots=opts.vpos.map(function(i){return i>>se.meta.blockshift});
+		opts.slots=opts.vpos.map(function(i){return i>>se.meta.slotshift});
 	}
 	
 	if (typeof opts.slots=='undefined') return;
@@ -122,9 +122,9 @@ var closestTag=function(opts) {
 	//console.time('closestTag')
 	if (typeof opts.slot=='undefined') {
 		if (typeof opts.vpos=='object') {
-			opts.slot=opts.vpos.map(function(i) {return i >> se.meta.blockshift});
+			opts.slot=opts.vpos.map(function(i) {return i >> se.meta.slotshift});
 		} else if (typeof opts.vpos=='number') {
-			opts.slot=opts.vpos>>se.meta.blockshift;
+			opts.slot=opts.vpos>>se.meta.slotshift;
 		}
 	}
 	if (typeof opts.slot=='number') slots=[opts.slot];
