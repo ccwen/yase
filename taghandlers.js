@@ -75,7 +75,7 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 			obj[val].push(ntag);
 		} else {
 			var ctx=this.context;
-			console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount);
+			console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
 			console.log('repeated val:',val, ', tagname:',tagname);
 		}
 	} else  {
@@ -209,7 +209,7 @@ var dotag=function(tag) {
 	*/
 	if (ti.opentag) {
 		ctx.tagstack.push(tagname);
-		ctx.tagstack_fi.push([ctx.filename,ctx.crlfcount]);
+		ctx.tagstack_fi.push([ctx.filename,ctx.linebreakcount]);
 	}
 
 	if (ti.closetag) {

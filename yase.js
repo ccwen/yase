@@ -173,13 +173,16 @@ var phraseSearch=function(tofind,opts) {
 		R=highlightresult.apply(this,[g,tokens.length,!opts.highlight]);
 	}
 	if (profile) console.timeEnd('highlight');
-	if (opts.array || opts.closesttag) {
+	if (opts.array || opts.closesttag || opts.sourceinfo ) {
 		var out=[];
 		for (var i in R) {
 			i=parseInt(i);
 			var obj={slot:i,text:R[i]};
 			if (opts.closesttag) {
 				obj.closest=closestTag.apply(this,[opts.closesttag,i]);
+			}
+			if (opts.sourceinfo) {
+				obj.sourceinfo=sourceInfo.apply(this,[i]);
 			}
 			out.push(obj);
 		}
@@ -309,7 +312,11 @@ var getTextByTag=function(opts) {
 		seqarr.push(i); 
 		if (seqarr.length>maxslot) break; 
 	}
-	return {slot:t.slot, ntag: tagseq, starttag:t, endtag:t2, head:t.head, text:this.getText(seqarr,opts)};
+	var out={slot:t.slot, ntag: tagseq, starttag:t, endtag:t2, head:t.head, text:this.getText(seqarr,opts)};
+	if (opts.sourceinfo) {
+		out.sourceinfo=sourceInfo.apply(this,[t.slot]);
+	}
+	return out;
 }	
 
 var getTag=function(tagname,seq) {
@@ -327,6 +334,16 @@ var findTagBySelector=function(selector) {
 }
 var getTagAttr=function(tagname,ntag,attributename) {
 	return this.customfunc.getTagAttr.apply(this,[tagname,ntag,attributename]);
+}
+var sourceInfo=function(nslot) {
+	var starts=this.get(['sourcefilestart'],true);
+	var f=binarysearch.closest( starts, nslot*this.meta.slotsize );
+	var linebreaks=this.get(['sourcefiles',f,'linebreak'],true);
+	var fn=this.get(['sourcefiles',f,'filename']);
+	var l=binarysearch.closest(linebreaks, nslot);
+	return { filename:fn , line:l+1 };
+	
+	//return file and line number given a slot
 }
 var closestTag=function(tagname,nslot,opts) {
 	if (typeof tagname =='string') tagname=[tagname];
@@ -429,6 +446,7 @@ var yase_use = function(fn,opts) {
 		instance.phraseSearch=phraseSearch;
 		instance.getPostingById=getPostingById;
 		instance.closestTag=closestTag;
+		instance.sourceInfo=sourceInfo;
 		instance.getTagInRange=getTagInRange;
 		instance.genToc=genToc;
 		instance.phrasecache={};

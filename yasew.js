@@ -11,7 +11,10 @@ var processtag=function() {
 		T+=tag[i++];
 		if (tag[i-1]=='>') break;
 	}
-	while (i<tag.length) if (tag[i++]=='\n') this.context.crlfcount++;
+	while (i<tag.length) if (tag[i++]=='\n') {
+		this.context.linebreakcount++;
+		this.context.linebreaks.push(this.context.slotcount);
+	}
 
 	taghandlers.dotag.apply(this, [T]);
 }
@@ -19,7 +22,10 @@ var processtoken=function() {
 	var ctx=this.context;
 	var output=this.output;
 	var i=0;
-	while (i<ctx.token.length) if (ctx.token[i++]=='\n') this.context.crlfcount++;
+	while (i<ctx.token.length) if (ctx.token[i++]=='\n') {
+		this.context.linebreakcount++;
+		this.context.linebreaks.push(this.context.slotcount);
+	}
 	var t=this.customfunc.normalizeToken.apply(this,[ctx.token]);
 	if (!output.postings[t]) {
 		output.postings[t] = [ctx.vpos];
@@ -37,7 +43,7 @@ var addslottext=function() {
 	var extraslot=  Math.floor( tokencount / ctx.maxslottoken ); //overflow
 	if (extraslot>0) {
 		if (!ctx.overflow[ctx.filename]) ctx.overflow[ctx.filename]=[];
-		ctx.overflow[ctx.filename].push(ctx.crlfcount);
+		ctx.overflow[ctx.filename].push(ctx.linebreakcount);
 	}
 	
 	var slotgroup=Math.floor(ctx.slotcount / ctx.slotperbatch );//
@@ -83,11 +89,16 @@ var doslot=function(now) {
 var newfile=function(fn){
 	var ctx=this.context;
 	ctx.filename=fn;
-	ctx.crlfcount=0;
+	ctx.linebreakcount=0;
 	ctx.slotbuffer="";
 	ctx.lastpos=0;
 	var B=this.buffer;
-	this.output.sourcefiles.push({filename:fn,vpos:ctx.vpos, size: B.length });
+	if (this.output.sourcefiles.length) {
+		this.output.sourcefiles[this.output.sourcefiles.length-1].linebreak=ctx.linebreaks;
+		ctx.linebreaks=[];
+	}
+	this.output.sourcefilestart.push(ctx.vpos);
+	this.output.sourcefiles.push({filename:fn,size: B.length });
 	if (B.charCodeAt(0)==0xfeff || B.charCodeAt(0)==0xfffe) ctx.lastpos++;
 	while (ctx.lastpos<B.length
 		&&(this.customfunc.isBreaker(B[ctx.lastpos])
@@ -95,7 +106,7 @@ var newfile=function(fn){
 			ctx.lastpos++;
 		}
 	//console.log('start from ',ctx.lastpos)
-	ctx.totalcrlfcount+=ctx.crlfcount;
+	ctx.totallinebreakcount+=ctx.linebreakcount;
 }
 var indexbuffer=function(B,fn) {
 	B=this.buffer=B.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
@@ -134,6 +145,7 @@ var initinverted=function(opts) {
 	console.log('SLOTSIZE',ctx.slotsize)
 	output.postings =  {};
 	output.sourcefiles=[];
+	output.sourcefilestart=[];
 	ctx.postingcount = 0;
 	ctx.vpos  = 0;	
 	ctx.offset= 0; // token offset of current slot
@@ -145,8 +157,9 @@ var initialize=function(options,context,output) {
 	context.slotcount=0;
 	context.tokencount=0; //non tag token in database
 	context.overflow={};
-	context.totalcrlfcount=0;
+	context.totallinebreakcount=0;
 	context.extraslot=0;	
+	context.linebreaks=[];
 	options.slotperbatch=options.slotperbatch||256;
 	options.slotshift=options.slotshift||DEFAULTSLOTSHIFT;
 	context.slotperbatch=options.slotperbatch;
@@ -181,6 +194,8 @@ var packmeta=function(options,context,output) {
 var finalize=function() {
 	if (this.finalized) return;
 	var ctx=this.context;
+	this.output.sourcefiles[this.output.sourcefiles.length-1].linebreak=ctx.linebreaks;
+	ctx.linebreaks=null;
 
 	for (var i in this.output.tags) {
 		//compress depth array, replace with number if all in same depth
@@ -207,7 +222,7 @@ var finalize=function() {
 		console.log('overflow slots:',ctx.overflow)
 	}
 	//console.log(JSON.stringify(this.output.texts))
-	ctx.totalcrlfcount+=ctx.crlfcount;
+	ctx.totallinebreakcount+=ctx.linebreakcount;
 	this.finalized=true;
 }
 
@@ -248,12 +263,12 @@ var save=function(filename,opts) {
 }
 var abortbuilding=function(message) {
 	var ctx=this.context;
-	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount)
+	console.log('FILE:',ctx.filename,'LINE:',ctx.linebreakcount)
 	throw message;
 }
 var warnbuilding=function(message) {
 	var ctx=this.context;
-	console.log('FILE:',ctx.filename,'LINE:',ctx.crlfcount)
+	console.log('FILE:',ctx.filename,'LINE:',ctx.linebreakcount)
 	console.log(message);
 }
 
