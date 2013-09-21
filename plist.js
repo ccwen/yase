@@ -13,6 +13,51 @@ var unpack = function (ar) { // unpack variable length integer list
   } while (i < ar.length);
   return r;
 }
+
+/*
+   arr:  [1,1,1,1,1,1,1,1,1]
+   levels: [0,1,1,2,2,0,1,2]
+   output: [5,1,3,1,1,3,1,1]
+*/
+
+var groupsum=function(arr,levels) {
+  if (arr.length!=levels.length+1) return null;
+  var stack=[];
+  var output=new Array(levels.length);
+  for (var i=0;i<levels.length;i++) output[i]=0;
+  for (var i=1;i<arr.length;i++) { //first one out of toc scope, ignored
+    if (stack.length>levels[i-1]) {
+      while (stack.length>levels[i-1]) stack.pop();
+    }
+    stack.push(i-1);
+    for (var j=0;j<stack.length;j++) {
+      output[stack[j]]+=arr[i];
+    }
+  }
+  return output;
+}
+/* arr= 1 , 2 , 3 ,4 ,5,6,7 //token posting
+  posting= 3 , 5  //tag posting
+  out = 3 , 2, 2
+*/
+var groupbyposting = function (arr, posting) {
+  if (!posting.length) return [arr.length];
+  var out=[];
+  for (var i=0;i<posting.length;i++) out[i]=0;
+  out[posting.length]=0;
+  var p=0,i=0,lasti=0;
+  while (i<arr.length && p<posting.length) {
+    if (arr[i]<=posting[p]) {
+      while (p<posting.length && i<arr.length && arr[i]<=posting[p]) {
+        out[p]++;
+        i++;
+      }      
+    } 
+    p++;
+  }
+  out[posting.length] = arr.length-i; //remaining
+  return out;
+}
 var groupbyblock = function (ar, slotshift, opts) {
   if (!ar.length)
 	return {};
@@ -127,5 +172,7 @@ plist.plphrase=plphrase;
 plist.plhead=plhead;
 
 plist.groupbyblock=groupbyblock;
+plist.groupbyposting=groupbyposting;
+plist.groupsum=groupsum;
 module.exports=plist;
 return plist;

@@ -4,6 +4,7 @@ var DEFAULTSLOTSHIFT=5;
 var taghandlers=require('./taghandlers');
 var Yadb=require('yadb');
 
+
 var processtag=function() {
 	var tag=this.context.token;
 	var i=0,T="";
@@ -181,6 +182,7 @@ var packmeta=function(options,context,output) {
 	meta.slotcount=context.slotcount;
 	meta.tokencount=context.tokencount;
 	meta.slotperbatch=options.slotperbatch;
+	if (options.toc) meta.toc=options.toc;
 	meta.slotshift=context.slotshift; //this might be changed
 	meta.version=options.version || '0.0.0';
 	

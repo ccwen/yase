@@ -6,6 +6,7 @@ yadb for supporting full text search
 
 var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
+var selector=require('./selector');
 
 var getPostingById=function(id) {
 	if (this.customfunc.token2tree) {
@@ -132,7 +133,7 @@ var phraseSearch=function(tofind,opts) {
 		if (!raw) raw=plist.plphrase(postings);
 		if (profile) console.timeEnd('phrase merge')
 		if (profile) console.time('group block')
-		if (opts.ungroup) return raw;
+		if (opts.raw) return raw;
 		//console.log(raw)
 		var g=plist.groupbyblock(raw, this.meta.slotshift);
 		if (profile) console.timeEnd('group block')		
@@ -153,14 +154,14 @@ var phraseSearch=function(tofind,opts) {
 	if (opts.start!=undefined) {
 		opts.maxcount=opts.maxcount||10;
 		var o={};
-		var count=0;
+		var count=0,start=opts.start;
 		for (var i in g) {
-			if (opts.start==0) {
+			if (start==0) {
 				if (count>=opts.maxcount) break;
 				o[i]=g[i];
 				count++;
 			} else {
-				opts.start--;
+				start--;
 			}
 		}
 		g=o;
@@ -175,15 +176,17 @@ var phraseSearch=function(tofind,opts) {
 	if (profile) console.timeEnd('highlight');
 	if (opts.array || opts.closesttag || opts.sourceinfo ) {
 		var out=[];
+		var seq=opts.start || 0;
 		for (var i in R) {
 			i=parseInt(i);
-			var obj={slot:i,text:R[i]};
+			var obj={seq:seq,slot:i,text:R[i]};
 			if (opts.closesttag) {
 				obj.closest=closestTag.apply(this,[opts.closesttag,i]);
 			}
 			if (opts.sourceinfo) {
 				obj.sourceinfo=sourceInfo.apply(this,[i]);
 			}
+			seq++;
 			out.push(obj);
 		}
 		return out;
@@ -256,13 +259,6 @@ var getRange=function(start,end,opts) {
 	}
 	return output;
 }
-var parseSelector=function(sel) {  // tag[attr=value]
-          var m=sel.match(/(.*?)\[(.*?)=(.*)/);
-          if (!m) return;
-          var tagname=m[1], attributename=m[2],value=m[3];
-          if (value[value.length-1]===']') value=value.substring(0,value.length-1);
-          return {tag:tagname,attribute:attributename,value:value};
-};
 var getTagInRange=function(start,end,tagname,opts) {
 	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
 	var startvpos=start*this.meta.slotsize;
@@ -329,7 +325,7 @@ var findTag=function(tagname,attributename,value) {
 	return this.customfunc.findTag.apply(this,[tagname,attributename,value]);
 }
 var findTagBySelector=function(selector) {
-	var T=parseSelector(selector);
+	var T=selector.parseSelector(selector);
 	return this.customfunc.findTag.apply(this,[T.tag,T.attribute,T.value]);
 }
 var getTagAttr=function(tagname,ntag,attributename) {
@@ -350,7 +346,7 @@ var closestTag=function(tagname,nslot,opts) {
 	var output=[];
 	for (var i in tagname) {
 		var tn=tagname[i];
-		sel=parseSelector(tn);
+		sel=selector.parseSelector(tn);
 		if (!sel) { //plain tagname
 			var vposarr= this.get(['tags',tn,'_vpos'],true);
 			if (!vposarr) throw 'undefiend TAG '+tn;
@@ -386,22 +382,59 @@ var getTextRange=function(start,end,opts) {
 	//console.log('fetching',start,end)
 	return this.getText(slots,opts);
 }
-var genToc=function(toctree,opts) {
+var buildToc=function(toc,opts) {
+	var toctree=this.meta.toc[toc] || toc;
+	if (!toctree) return null;
+	var res=[];
+	if (opts.tofind) {
+		res=this.phraseSearch(opts.tofind, {raw:true});
+	}	
+	var T=this.genToc(toctree,opts);
+	var Tvpos=T.map(function(a) {return a[1]});
+	var Tree=[];
+	for (var i in toctree) {
+		Tree.push(this.parseSelector(toctree[i]));
+	}
+	var hits=null;
+	if (res.length) {
+		var g=plist.groupbyposting(res, Tvpos);
+		hits=plist.groupsum(g,T.map(function(a){return a[0]}));
+	}
+
+	var output=[];
+	for (var i=0;i<T.length;i++ ) {
+		if (opts.hidenohit && hits && !hits[i]) continue;
+		var sel=Tree[T[i][0]];
+		var tag=this.getTag(sel.tag,T[i][2]);
+		var title=tag.head;
+		if (sel.key) title=this.getTagAttr(sel.tag,T[i][2],sel.key);
+		var tocnode={depth:T[i][0], title:title, slot: tag.slot, hit:0 };
+		if (hits && hits[i]) tocnode.hit=hits[i];
+		output.push(tocnode);
+	}
+	return output;
+}
+
+var genToc=function(toc,opts) {
+	var toctree=this.meta.toc[toc] || toc;
 	//var db=this.getdb();
 	var start=opts.start || 0;
 	var end=opts.end || this.meta.slotcount;
 
 	var output=[];
 	for (var i in toctree) {
-		var vposarr=this.get(['tags',toctree[i],'_vpos']);
+		var sel=this.parseSelector(toctree[i]);
+		var vposarr=this.get(['tags',sel.tag,'_vpos']);
 		for (var j in vposarr) {
-			output.push( [ 1+parseInt(i), vposarr[j]])	
+			//toc level, vpos, tagseq
+			output.push( [ parseInt(i), vposarr[j], parseInt(j)])	
 		}
 		
 	}
 	output.sort( function(a,b) {return a[1]-b[1]});
 	return output;
 }
+
 var getToc=function(tagname,seq) {
 	return this.getTag(tagname,seq).head;
 }
@@ -449,10 +482,11 @@ var yase_use = function(fn,opts) {
 		instance.sourceInfo=sourceInfo;
 		instance.getTagInRange=getTagInRange;
 		instance.genToc=genToc;
+		instance.buildToc=buildToc;
 		instance.phrasecache={};
 		instance.phrasecache_raw={};
 		instance.tagpostingcache={};
-		instance.parseSelector=parseSelector;
+		instance.parseSelector=selector.parseSelector;
 		instance.getTextRange=getTextRange;		
 		instance.getRange=getRange;	
 

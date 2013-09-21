@@ -1,4 +1,5 @@
 var Schema=require('./schema');
+var selector=require('./selector');
 
 var predefined = {
 	pb: function(taginfo) {
@@ -70,19 +71,42 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 	}
 	var val=idarr[idarr.length-1];
 	if (typeof obj[val] !=='undefined') {
-		if (ai.allowrepeat) {
-			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
-			obj[val].push(ntag);
-		} else {
+		if (ai.unique) {
 			var ctx=this.context;
 			console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
 			console.log('repeated val:',val, ', tagname:',tagname);
+		} else {
+			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
+			obj[val].push(ntag);
 		}
 	} else  {
 		obj[val]= ntag; 
 	} 
 }
+var addprefix=function(prefix) {
+	var prefixs=prefix.split(".");
+	var out=[];
+	for (var i in prefixs) {
+		var pf=prefixs[i];
+		var sel=selector.parseSelector(pf);
 
+		if (sel.key) {
+			var V=this.output.tags[sel.tag][sel.key];	
+			if (!V) {
+				this.abortbuilding('cannot add prefix'+pf+
+					" specific saveval:true for prefix attribute")
+			}			
+			out.push(V[V.length-1]);
+		} else {
+			if (!this.output.tags[sel.tag]) {
+				this.abortbuilding('no such tag '+sel.tag);
+			}
+			var V=this.output.tags[sel.tag]._count;
+			out.push(V);
+		}
+	}
+	return out.join(".")+".";
+}
 var defaulttaghandler=function(taginfo) {
 	var k=taginfo.fulltagname;
 	var ctx=this.context;
@@ -148,23 +172,28 @@ var defaulttaghandler=function(taginfo) {
 		tags[k]._depth.push(ctx.tagstack.length);
 	}
 
-	if (taginfo.indexattributes && taginfo.opentag) for (var i in taginfo.indexattributes) {
+	if (taginfo.indexattributes && taginfo.opentag) 
+	for (var i in taginfo.indexattributes) {
+		var I=taginfo.indexattributes[i];
 		var attrkey=i+'=';
 		if (!tags[k][attrkey]) tags[k][attrkey]={};
-		var val=taginfo.tag.match( taginfo.indexattributes[i].regex);		
+		var val=taginfo.tag.match( I.regex);
 		if (val) {
 			if (val.length>1) val=val[1]; else val=val[0];
-			var depth=taginfo.indexattributes[i].depth || 1;
-			//console.log(attrkey,val,this.tags[k][attrkey],depth)
-			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, taginfo.indexattributes[i] , taginfo.tagname]);
-			if (taginfo.indexattributes[i].savehead) {
+			var depth=I.depth || 1;
+			if (I.prefix) {
+				val=addprefix.apply(this,[I.prefix])+val;
+				console.log('new value ',val,'for',k,i);
+			}
+			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
+			if (I.savehead) {
 				taginfo.saveheadkey=attrkey+val;
 			}
-		} else if (!taginfo.indexattributes[i].allowempty) {
+		} else if (!I.allowempty) {
 			this.abortbuilding('empty val '+taginfo.tag);
 		} 
 
-		if (taginfo.indexattributes[i].saveval) {
+		if (I.saveval) {
 			if (!tags[k][i]) tags[k][i]=[];
 			if (!val) val="";
 			tags[k][i].push(val);

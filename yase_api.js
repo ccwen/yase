@@ -7,7 +7,11 @@ var phraseSearch=function(opts) {
 	var res=se.phraseSearch(opts.tofind,opts);
 	return res;
 };
-
+var buildToc=function(opts) {
+	var se=yase(opts.db);
+	var res=se.buildToc(opts.toc,opts);
+	return res;
+}
 var getText=function(opts) {
 	var se=yase(opts.db);
 	var res=se.getText(opts.seq || opts.slot || 0 ,opts);
@@ -162,6 +166,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	getTagAttr:gettagattr,
 	getTextRange:getTextRange,
 	getTagInRange:getTagInRange,
+	buildToc:buildToc,
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,
 	closestTag:closestTag,
