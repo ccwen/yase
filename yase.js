@@ -104,6 +104,18 @@ var highlightresult=function(R,phraselength,nohighlight) {
 	}
 	return output;
 }
+var trimbyrange=function(g, start,end) {
+	var out={};
+	start=start||0;
+	if (end==-1) end=this.meta.slotcount+1;
+	for (var i in g) {
+		i=parseInt(i);
+		if (i>=start && i<end)  {
+			out[i]=g[i];
+		}
+	}
+	return out;
+}
 var profile=false;
 var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
@@ -148,6 +160,14 @@ var phraseSearch=function(tofind,opts) {
 		
 		raw=plist.plhead(raw, pltag );
 		g=plist.groupbyblock(raw, this.meta.slotshift);
+	}
+	//trim by range
+	if (opts.rangestart || ( typeof opts.rangeend !='undefined' && opts.rangend!=-1) ) {
+		g=trimbyrange.apply(this,[g,opts.rangestart,opts.rangeend]);
+	}
+
+	if (opts.countonly) {
+		return {count:Object.keys(g).length, hitcount: raw.length};
 	}
 
 	//trim output
