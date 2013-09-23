@@ -356,8 +356,8 @@ var sourceInfo=function(nslot) {
 	var f=binarysearch.closest( starts, nslot*this.meta.slotsize );
 	var linebreaks=this.get(['sourcefiles',f,'linebreak'],true);
 	var fn=this.get(['sourcefiles',f,'filename']);
-	var l=binarysearch.closest(linebreaks, nslot);
-	return { filename:fn , line:l+1 };
+	var l=binarysearch.closest(linebreaks, nslot-1);
+	return { filename:fn , line:l+2 };
 	
 	//return file and line number given a slot
 }
