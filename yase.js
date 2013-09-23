@@ -494,6 +494,7 @@ var yase_use = function(fn,opts) {
 		instance.findTag=findTag;
 		instance.findTagBySelector=findTagBySelector;
 		instance.getTagAttr=getTagAttr;
+
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
 		instance.phraseSearch=phraseSearch;

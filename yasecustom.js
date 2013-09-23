@@ -101,7 +101,6 @@ var token2tree=function(tk) {
 	var token2tree_western=function(tk) {
 	//for chinese. 
 		var vowels=['a','ā','i','o','u','ī','ū','e'];
-		
 		var res=[];
 		var key="";
 		var i=0;
@@ -115,7 +114,9 @@ var token2tree=function(tk) {
 				res.push(key);
 				key="";
 				if (res.length>=3) {
-					res.push( tk.substring(i+1));
+					var remain=tk.substring(i+1);
+					if (!remain) remain=' '; //fix bug caused by "sentence"
+					res.push( remain);
 					break;
 				}
 			}

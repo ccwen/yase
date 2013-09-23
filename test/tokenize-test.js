@@ -1,6 +1,7 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
     yasecustom=require('../yasecustom');
+    yasecustom.customfunc=yasecustom;
 var fs=require('fs');
 
 vows.describe('splitter test suite').addBatch({
@@ -41,6 +42,15 @@ vows.describe('splitter test suite').addBatch({
             assert.equal("⿱⿰日月皿",normalized,'normalized');
             //assert.equal("𠀀",token[3],'normalized');
         }
+    },
+    'token2tree' : {
+        topic: function () {
+            return "sentence";
+        },
+        sentence:function(topic){
+            var tree=yasecustom.token2tree(topic)
+            assert.deepEqual(["se","nte","nce"," "],tree);
+        }, 
     }
 
 
