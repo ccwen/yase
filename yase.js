@@ -104,6 +104,7 @@ var highlightresult=function(R,phraselength,nohighlight) {
 	}
 	return output;
 }
+//need optimized, use array slice
 var trimbyrange=function(g, start,end) {
 	var out={};
 	start=start||0;
@@ -272,10 +273,10 @@ var getText=function(slot,opts) {
 }
 
 var getRange=function(start,end,opts) {
-	var output={};
+	var output=[];
 	for (var i=start;i<end;i++) {
 		if (i>=this.meta.slotcount) break;
-		output[i] = getText.apply(this,[i,opts]);
+		output.push({seq:start-i, slot:i ,text: getText.apply(this,[i,opts])});
 	}
 	return output;
 }

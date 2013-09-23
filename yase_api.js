@@ -19,7 +19,7 @@ var getText=function(opts) {
 }
 var fillText=function(opts) {
 	var se=yase(opts.db);
-	var output={};
+	var output=[];
 	if (typeof opts.slots=='undefined' && typeof opts.vpos!='undefined'){
 		opts.slots=opts.vpos.map(function(i){return i>>se.meta.slotshift});
 	}
@@ -27,7 +27,7 @@ var fillText=function(opts) {
 	if (typeof opts.slots=='undefined') return;
 	for (var i in opts.slots) {
 		if (opts.slots[i]>=se.meta.slotcount) break;
-		output[opts.slots[i]] = se.getText( opts.slots[i],opts);
+		output.push({seq:parseInt(i),slot:opts.slots[i], text:se.getText( opts.slots[i],opts)});
 	}
 	return output;
 }
