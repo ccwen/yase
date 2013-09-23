@@ -124,7 +124,7 @@ var phraseSearch=function(tofind,opts) {
 	var tokens=tokenize.apply(this,[tofind]);
 	var g=null,raw=null;
 	var tag=opts.tag||"";
-
+	opts.array =true; //default output format
 	if (this.phrasecache_raw && this.phrasecache_raw[tofind]) {
 		raw=this.phrasecache_raw[tofind];
 	}
@@ -367,14 +367,7 @@ var closestTag=function(tagname,nslot,opts) {
 	for (var i in tagname) {
 		var tn=tagname[i];
 		sel=selector.parseSelector(tn);
-		if (!sel) { //plain tagname
-			var vposarr= this.get(['tags',tn,'_vpos'],true);
-			if (!vposarr) throw 'undefiend TAG '+tn;
-			var c=binarysearch.closest( vposarr,nslot*this.meta.slotsize );
-			var tag=this.getTag(tn,c);
-			tag.ntag=c;
-			output.push( tag);	
-		} else { // attr=value selector
+		if (sel.attribute && sel.value) { //plain tagname
 			//var slots= this.getdb().get(['tags',sel.tag,'slot'],true);
 			var vposarr=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
 			var c=binarysearch.closest( vposarr, nslot*this.meta.slotsize);
@@ -383,6 +376,18 @@ var closestTag=function(tagname,nslot,opts) {
 			var tag=this.getTag(sel.tag,ntags[c]);
 			tag.ntag=ntags[c];
 			output.push( tag );
+		} else {
+			var vposarr= this.get(['tags',sel.tag,'_vpos'],true);
+			if (!vposarr) throw 'undefiend TAG '+sel.tag;
+			var c=binarysearch.closest( vposarr,nslot*this.meta.slotsize );
+			var tag=this.getTag(sel.tag,c);
+			if (sel.key) {
+				tag.value=this.getTagAttr(sel.tag,c,sel.key);
+				if (!tag.value) tag.value="undefined, set saveval in indexattributes"
+
+			}
+			tag.ntag=c;
+			output.push( tag);	
 		}
 	}
 	if (output.length==1) return output[0];

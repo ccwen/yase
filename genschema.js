@@ -36,10 +36,10 @@ Genschema=function() {
 			var I={};
 			for (var j in attrs) {
 				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', 
-				unique: !!opts.unique, 
-				saveval:!!opts.saveval, 
+				unique: opts.unique, 
+				saveval:opts.saveval, 
 				prefix:opts.prefix,
-				depth:opts.depth||1};
+				depth:opts.depth};
 			}
 			this.schema[tags[i]].indexattributes=JSON.parse(JSON.stringify(I));
 		}

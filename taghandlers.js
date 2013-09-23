@@ -180,11 +180,16 @@ var defaulttaghandler=function(taginfo) {
 		var val=taginfo.tag.match( I.regex);
 		if (val) {
 			if (val.length>1) val=val[1]; else val=val[0];
-			var depth=I.depth || 1;
 			if (I.prefix) {
+				if (!I.unique) I.unique=true;
+				if (typeof I.depth=='undefined' || I.depth<2) {
+					I.depth= I.prefix.split(".").length+1;
+					console.log('set to depth ',I.depth)
+				}
 				val=addprefix.apply(this,[I.prefix])+val;
 				console.log('new value ',val,'for',k,i);
 			}
+			var depth=I.depth || 1;
 			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
 			if (I.savehead) {
 				taginfo.saveheadkey=attrkey+val;
