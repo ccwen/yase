@@ -1,6 +1,6 @@
 var Schema=require('./schema');
 var selector=require('./selector');
-
+var verbose=false;
 var predefined = {
 	pb: function(taginfo) {
 		if (taginfo.closetag && !taginfo.opentag) return;
@@ -73,8 +73,10 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 	if (typeof obj[val] !=='undefined') {
 		if (ai.unique) {
 			var ctx=this.context;
-			console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
-			console.log('repeated val:',val, ', tagname:',tagname);
+			if (ai.default!=val) {
+				console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
+				console.log('repeated val:',val, ', tagname:',tagname);
+			}
 		} else {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
 			obj[val].push(ntag);
@@ -178,16 +180,17 @@ var defaulttaghandler=function(taginfo) {
 		var attrkey=i+'=';
 		if (!tags[k][attrkey]) tags[k][attrkey]={};
 		var val=taginfo.tag.match( I.regex);
+		if (val && val.length>1) val=val[1]; else if (val) val=val[0];
+		if (!val && I.default) val=I.default;
 		if (val) {
-			if (val.length>1) val=val[1]; else val=val[0];
 			if (I.prefix) {
 				if (!I.unique) I.unique=true;
 				if (typeof I.depth=='undefined' || I.depth<2) {
 					I.depth= I.prefix.split(".").length+1;
 					console.log('set to depth ',I.depth)
 				}
-				val=addprefix.apply(this,[I.prefix])+val;
-				console.log('new value ',val,'for',k,i);
+				if (val!=I.default)	val=addprefix.apply(this,[I.prefix])+val;
+				if (verbose) console.log('new value ',val,'for',k,i);
 			}
 			var depth=I.depth || 1;
 			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
