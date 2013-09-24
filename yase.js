@@ -409,7 +409,9 @@ var getTextRange=function(start,end,opts) {
 	return this.getText(slots,opts);
 }
 var buildToc=function(toc,opts) {
-	var toctree=this.meta.toc[toc] || toc;
+	var toctree=toc;
+	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
+
 	if (!toctree) return null;
 	var res=[];
 	if (opts.tofind) {
@@ -442,7 +444,8 @@ var buildToc=function(toc,opts) {
 }
 
 var genToc=function(toc,opts) {
-	var toctree=this.meta.toc[toc] || toc;
+	var toctree=toc;
+	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
 	//var db=this.getdb();
 	var start=opts.start || 0;
 	var end=opts.end || this.meta.slotcount;
