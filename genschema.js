@@ -39,7 +39,7 @@ Genschema=function() {
 				unique: opts.unique, 
 				saveval:opts.saveval, 
 				prefix:opts.prefix,
-				default:opts.default,
+				autoinc:opts.autoinc,
 				depth:opts.depth};
 			}
 			this.schema[tags[i]].indexattributes=JSON.parse(JSON.stringify(I));

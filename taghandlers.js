@@ -91,7 +91,7 @@ var addprefix=function(prefix) {
 	for (var i in prefixs) {
 		var pf=prefixs[i];
 		var sel=selector.parseSelector(pf);
-
+		if (!this.output.tags[sel.tag]) return "";
 		if (sel.key) {
 			var V=this.output.tags[sel.tag][sel.key];	
 			if (!V) {
@@ -108,6 +108,14 @@ var addprefix=function(prefix) {
 		}
 	}
 	return out.join(".")+".";
+}
+var addsuffix=function(I) {
+	if (I.autoinc) {
+		I.inc=I.inc||1;
+		val=(I.lastval||"")+"."+I.inc;
+		I.inc++;
+	} else return "";
+	return val;
 }
 var defaulttaghandler=function(taginfo) {
 	var k=taginfo.fulltagname;
@@ -181,7 +189,12 @@ var defaulttaghandler=function(taginfo) {
 		if (!tags[k][attrkey]) tags[k][attrkey]={};
 		var val=taginfo.tag.match( I.regex);
 		if (val && val.length>1) val=val[1]; else if (val) val=val[0];
-		if (!val && I.default) val=I.default;
+		if (!val) {
+			val=addsuffix.apply(this,[I]);
+		} else {
+			I.inc=1; //reset
+			I.lastval=val;
+		}
 		if (val) {
 			if (I.prefix) {
 				if (!I.unique) I.unique=true;
@@ -189,7 +202,7 @@ var defaulttaghandler=function(taginfo) {
 					I.depth= I.prefix.split(".").length+1;
 					console.log('set to depth ',I.depth)
 				}
-				if (val!=I.default)	val=addprefix.apply(this,[I.prefix])+val;
+				val=addprefix.apply(this,[I.prefix])+val;
 				if (verbose) console.log('new value ',val,'for',k,i);
 			}
 			var depth=I.depth || 1;

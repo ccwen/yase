@@ -101,13 +101,14 @@ var enumydb=function() {
 	return output;
 }
 var getRaw=function(path) { //path including database name
+	var res=null;
 	if (!path || path.length==0) {
 		var res=enumydb();
 	} else {
 		var dbname=path.shift();
 		dbname=dbname.replace(':','/');
 		var se=yase(dbname);
-		var res=se.get(path,true);
+		if (se) res=se.get(path,true);
 	}
 	return res;
 }
@@ -155,12 +156,23 @@ var closestTag=function(opts) {
 	}
 	return output;
 }
+var exist=function(names) {
+	if (!Array.isArray(names)) {
+		names=[names];
+	}
+	var out={};
+	for (var i in names) {
+		out[names[i]]=(!!yase(names[i]));
+	}
+	return out;
+}
 var installservice=function(services) { // so that it is possible to call other services
 	//yase_api(services);
 	require('yadb').api(services);
 	services['yase']={ 
 	getText:getText,
 	fillText:fillText,
+	exist:exist,
 	getRange:getRange,
 	getTextByTag:gettextbytag,
 	getTagAttr:gettagattr,
