@@ -61,7 +61,7 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 		}
 	}
 	if (idarr.length>depth) {
-		abortbuilding('id depth exceed');
+		this.abortbuilding('id depth exceed',idarr,depth);
 		return;
 	}
 	while (idarr.length<depth) idarr.push('0');
@@ -198,11 +198,13 @@ var defaulttaghandler=function(taginfo) {
 		if (val) {
 			if (I.prefix) {
 				if (!I.unique) I.unique=true;
-				if (typeof I.depth=='undefined' || I.depth<2) {
-					I.depth= I.prefix.split(".").length+1;
-					console.log('set to depth ',I.depth)
-				}
 				val=addprefix.apply(this,[I.prefix])+val;
+
+				if (typeof I.depth=='undefined' || I.depth<2) {
+					I.depth= val.split(".").length;
+					if (verbose) console.log('set to depth ',I.depth)
+				}
+
 				if (verbose) console.log('new value ',val,'for',k,i);
 			}
 			var depth=I.depth || 1;

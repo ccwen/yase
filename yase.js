@@ -384,7 +384,7 @@ var closestTag=function(tagname,nslot,opts) {
 			var tag=this.getTag(sel.tag,c);
 			if (sel.key) {
 				tag.value=this.getTagAttr(sel.tag,c,sel.key);
-				if (!tag.value) tag.value="undefined, set saveval in indexattributes"
+				if (!tag.value) tag.value=tn+" is undefined, check config.json pagebreak setting or set saveval in indexattributes"
 
 			}
 			tag.ntag=c;

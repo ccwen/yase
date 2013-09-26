@@ -266,7 +266,8 @@ var save=function(filename,opts) {
 var abortbuilding=function(message) {
 	var ctx=this.context;
 	console.log('FILE:',ctx.filename,'LINE:',ctx.linebreakcount)
-	throw message;
+	console.log(arguments)
+	throw "abortbuilding";
 }
 var warnbuilding=function(message) {
 	var ctx=this.context;
