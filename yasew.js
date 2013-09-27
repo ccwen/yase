@@ -266,13 +266,13 @@ var save=function(filename,opts) {
 var abortbuilding=function(message) {
 	var ctx=this.context;
 	console.log('FILE:',ctx.filename,'LINE:',ctx.linebreakcount)
-	console.log(arguments)
+	console.log.call(console,arguments)
 	throw "abortbuilding";
 }
 var warnbuilding=function(message) {
 	var ctx=this.context;
 	console.log('FILE:',ctx.filename,'LINE:',ctx.linebreakcount)
-	console.log(message);
+	console.log.apply(console,arguments);
 }
 
 var Create=function(options) {

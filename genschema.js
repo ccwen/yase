@@ -38,9 +38,10 @@ Genschema=function() {
 				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', 
 				unique: opts.unique, 
 				saveval:opts.saveval, 
+				sparseval:opts.sparseval, 
 				prefix:opts.prefix,
-				forcenumber:opts.forcenumber,
-				autoinc:opts.autoinc,
+				range:opts.range,
+				allowempty:opts.allowempty,
 				depth:opts.depth};
 			}
 			this.schema[tags[i]].indexattributes=JSON.parse(JSON.stringify(I));

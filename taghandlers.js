@@ -1,6 +1,5 @@
 var Schema=require('./schema');
 var selector=require('./selector');
-var verbose=false;
 var parentreset={};
 var predefined = {
 	pb: function(taginfo) {
@@ -48,18 +47,17 @@ var loadschema=function(S) {
 	}
 	if (typeof S=='string') {
 		var stock=Schema[S];
-		if (!stock) {
-			console.log('scheme '+S+' not found');
-			return;
-		}
+		if (!stock) this.abortbuilding('scheme '+S+' not found');
 		this.setschema(stock);
 	} else if (typeof S=='object') this.setschema(S);
-	else throw 'no schema';	
+	else this.abortbuilding('no schema');	
 	return JSON.parse(JSON.stringify(S));
 }
-var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
+var iddepth2tree=function(obj,id,ntag,depth,I ,tagname) {
 	var idarr=null;
-	if (ai.cbid2tree) idarr=ai.cbid2tree(id); else {
+	var ctx=this.context;
+	var opt=this.options;
+	if (I.cbid2tree) idarr=I.cbid2tree(id); else {
 		if (depth==1) {
 			idarr=[id];
 		} else {
@@ -75,21 +73,30 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 		if (!obj[ idarr[i]]) obj[ idarr[i]]={};
 		obj = obj[ idarr[i]];
 	}
-	var val=idarr[idarr.length-1];
-	if (typeof obj[val] !=='undefined') {
-		if (ai.unique) {
-			var ctx=this.context;
-			if (ai.default!=val) {
-				console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
-				console.log('repeated val:',val,obj, ', tagname:',tagname);
+
+	var putvalue=function(val) {
+		if (typeof obj[val] !=='undefined') {
+			if (I.unique) {
+				this.warnbuilding('repeated val:',val,', tagname:',tagname);
+			} else {
+				if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
+				obj[val].push(ntag);
 			}
-		} else {
-			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
-			obj[val].push(ntag);
-		}
-	} else  {
-		obj[val]= ntag; 
-	} 
+		} else  {
+			obj[val]= ntag; 
+		} 
+	}
+	var v=idarr[idarr.length-1];
+	if (I.range && v.indexOf(I.range)>-1) {
+		var r=v.split(I.range);
+		var from=parseInt(r[0])
+		var till=parseInt(r[1]);
+		if (isNaN(from)||isNaN(till)) this.abortbuilding('range must be number');
+		for (var i=from;i<=till;i++) putvalue.apply(this,[i]);
+		if (opt.loglevel>2) this.warnbuilding('range from',from,' till',till);
+	} else {
+		putvalue.apply(this,[idarr[idarr.length-1]]);
+	}
 }
 var addprefix=function(prefix) {
 	var prefixs=prefix.split(".");
@@ -115,17 +122,10 @@ var addprefix=function(prefix) {
 	}
 	return out.join(".")+".";
 }
-var addsuffix=function(I) {
-	if (I.autoinc) {
-		I.inc=I.inc||1;
-		val=(I.lastval||"")+"."+I.inc;
-		I.inc++;
-	} else return "";
-	return val;
-}
 var defaulttaghandler=function(taginfo) {
 	var k=taginfo.fulltagname;
 	var ctx=this.context;
+	var opt=this.options;
 	var tags=this.output.tags;
 	var hidetag=false;
 	//if (taginfo.tagname=='注' || taginfo.tagname=='t') {
@@ -141,7 +141,6 @@ var defaulttaghandler=function(taginfo) {
 		for (var j in children) {
 			var T=children[j];
 			var ti=ctx.schema[T.tag].indexattributes[T.attr];
-			//console.log(ti)
 			if (ti.autoinc) {
 				ti.lastval="0";
 				ti.inc=1;
@@ -207,19 +206,7 @@ var defaulttaghandler=function(taginfo) {
 		if (!tags[k][attrkey]) tags[k][attrkey]={};
 		var val=taginfo.tag.match( I.regex);
 		if (val && val.length>1) val=val[1]; else if (val) val=val[0];
-		if (!val) {
-			val=addsuffix.apply(this,[I]);
-		} else {
-			I.inc=1; //reset
-			I.lastval=val;
-			if (I.forcenumber) {
-				I.lastval=parseInt(I.lastval).toString();
-				if (I.lastval!=val && verbose) {
-					console.log(ctx.filename,':',ctx.linebreakcount, 'from',val,'to',I.lastval);
-				}
-				val=I.lastval;
-			}
-		}
+
 		if (val) {
 			if (I.prefix) {
 				if (!I.unique) I.unique=true;
@@ -227,24 +214,40 @@ var defaulttaghandler=function(taginfo) {
 
 				if (typeof I.depth=='undefined' || I.depth<2) {
 					I.depth= val.split(".").length;
-					if (verbose) console.log('set to depth ',I.depth)
+					if (opt.loglevel>1) console.log('set to depth ',I.depth)
 				}
-
-				if (verbose) console.log('new value ',val,'for',k,i);
+				if (opt.loglevel>3) console.log('new value ',val,'for',k,i);
 			}
 			var depth=I.depth || 1;
-			iddepth2tree.apply(this,[tags[k][attrkey], val, tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
+			iddepth2tree.apply(this,[tags[k][attrkey], val,
+				 tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
 			if (I.savehead) {
 				taginfo.saveheadkey=attrkey+val;
 			}
 		} else if (!I.allowempty) {
+			console.log(I)
 			this.abortbuilding('empty val '+taginfo.tag);
 		} 
 
-		if (I.saveval) {
-			if (!tags[k][i]) tags[k][i]=[];
-			if (!val) val="";
-			tags[k][i].push(val);
+		if (I.saveval || I.sparseval) {
+			if (I.sparseval) {
+				var ntag=tags[k]._vpos.length -1;
+				if (!tags[k][i]) tags[k][i]={};
+				if (val) {
+					if (!tags[k][i][ntag]) tags[k][i][ntag]=val;
+					else {
+						if (!Array.isArray(tags[k][i][ntag])) {
+							tags[k][i][ntag]=[tags[k][i][ntag]];
+							this.warnbuilding('repeated value',val)
+						}
+						tags[k][i][ntag].push(val);
+					}
+				}
+			} else {
+				if (!tags[k][i]) tags[k][i]=[];
+				if (!val) val="";
+				tags[k][i].push(val);				
+			}
 		}
 	}
 
