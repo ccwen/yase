@@ -1,6 +1,7 @@
 var Schema=require('./schema');
 var selector=require('./selector');
 var verbose=false;
+var parentreset={};
 var predefined = {
 	pb: function(taginfo) {
 		if (taginfo.closetag && !taginfo.opentag) return;
@@ -18,17 +19,22 @@ var setschema=function(schema) {
 	//this.options.schema=schema;
 
 	ctx.schema=JSON.parse(JSON.stringify(schema));
+	
 	for (var i in ctx.schema) {
 		var h=ctx.schema[i].handler;
 		if (typeof h == 'string') {
 			ctx.schema[i].handler=predefined[h];
 		}
-		for (var j in ctx.schema[i]) {
-			var ATTR=ctx.schema[i].indexattributes;
-			if (!ATTR) continue;
-			//convert regstr to regex as json cannot hold regex
-			for (var k in ATTR) {
-				if (ATTR[k].regstr) ATTR[k].regex=new RegExp(ATTR[k].regstr)
+		var ATTR=ctx.schema[i].indexattributes;
+		if (!ATTR) continue;
+		//convert regstr to regex as json cannot hold regex
+		for (var k in ATTR) {
+			if (ATTR[k].regstr) ATTR[k].regex=new RegExp(ATTR[k].regstr)
+			if (ATTR[k].prefix) {
+				var sel=selector.parseSelector(ATTR[k].prefix);
+				if (!parentreset[sel.tag]) parentreset[sel.tag]=[];
+				parentreset[sel.tag].push({tag:i,attr:k});
+				//console.log("PREFIX",ATTR[k].prefix,i,k)
 			}
 		}
 	}	
@@ -75,7 +81,7 @@ var iddepth2tree=function(obj,id,ntag,depth,ai ,tagname) {
 			var ctx=this.context;
 			if (ai.default!=val) {
 				console.log("FILE:",ctx.filename,"LINE:",ctx.linebreakcount);
-				console.log('repeated val:',val, ', tagname:',tagname);
+				console.log('repeated val:',val,obj, ', tagname:',tagname);
 			}
 		} else {
 			if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
@@ -130,6 +136,18 @@ var defaulttaghandler=function(taginfo) {
 	if (!tags[k]) tags[k]={ _count:0};
 	tags[k]._count++;
 	
+	if (parentreset[k]) {
+		var children=parentreset[k];
+		for (var j in children) {
+			var T=children[j];
+			var ti=ctx.schema[T.tag].indexattributes[T.attr];
+			//console.log(ti)
+			if (ti.autoinc) {
+				ti.lastval="0";
+				ti.inc=1;
+			}
+		}
+	}
 	if (taginfo.newslot) {
 		if (taginfo.opentag) {
 			this.addslottext();
@@ -194,6 +212,13 @@ var defaulttaghandler=function(taginfo) {
 		} else {
 			I.inc=1; //reset
 			I.lastval=val;
+			if (I.forcenumber) {
+				I.lastval=parseInt(I.lastval).toString();
+				if (I.lastval!=val && verbose) {
+					console.log(ctx.filename,':',ctx.linebreakcount, 'from',val,'to',I.lastval);
+				}
+				val=I.lastval;
+			}
 		}
 		if (val) {
 			if (I.prefix) {
@@ -284,6 +309,7 @@ var dotag=function(tag) {
 var initialize=function() {
 	this.context.tagstack=[];
 	this.context.tagstack_fi=[];
+
 }
 module.exports={predefined:predefined,dotag:dotag,
 	loadschema:loadschema,setschema:setschema, initialize:initialize};

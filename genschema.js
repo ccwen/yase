@@ -39,6 +39,7 @@ Genschema=function() {
 				unique: opts.unique, 
 				saveval:opts.saveval, 
 				prefix:opts.prefix,
+				forcenumber:opts.forcenumber,
 				autoinc:opts.autoinc,
 				depth:opts.depth};
 			}
