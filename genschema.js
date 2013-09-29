@@ -17,11 +17,16 @@ Genschema=function() {
 		addtags.apply(this,[tags,{newslot:true,savepos:true,savehead:true}]);
 		return this;
 	}
+	this.paragraph=function(tags) {
+		if (typeof tags=='string') tags=[tags];
+		addtags.apply(this,[tags,{newslot:true,savepos:true}]);
+		return this;
+	}	
 	this.newslot=function(tags) {
 		if (typeof tags=='string') tags=[tags];
 		addtags.apply(this,[tags,{newslot:true}]);
 		return this;
-	}	
+	}
 	this.emptytag=function(tags) {
 		if (typeof tags=='string') tags=[tags];
 		addtags.apply(this,[tags,{emptytag:true,newslot:false,savepos:true,savehead:false}]);

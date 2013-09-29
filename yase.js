@@ -382,10 +382,15 @@ var closestTag=function(tagname,nslot,opts) {
 			if (!vposarr) throw 'undefiend TAG '+sel.tag;
 			var c=binarysearch.closest( vposarr,nslot*this.meta.slotsize );
 			var tag=this.getTag(sel.tag,c);
+			console.log('closest',c)
 			if (sel.key) {
 				tag.value=this.getTagAttr(sel.tag,c,sel.key);
+				var tried=100; //this should be enough
+				while (!tag.value && tried) {
+					tag.value=this.getTagAttr(sel.tag,c--,sel.key);
+					tried--;
+				}
 				if (!tag.value) tag.value=tn+" is undefined, check config.json pagebreak setting or set saveval in indexattributes"
-
 			}
 			tag.ntag=c;
 			output.push( tag);	
