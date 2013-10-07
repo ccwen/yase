@@ -1,6 +1,5 @@
 var Schema=require('./schema');
 var selector=require('./selector');
-var parentreset={};
 var predefined = {
 	pb: function(taginfo) {
 		if (taginfo.closetag && !taginfo.opentag) return;
@@ -31,9 +30,6 @@ var setschema=function(schema) {
 			if (ATTR[k].regstr) ATTR[k].regex=new RegExp(ATTR[k].regstr)
 			if (ATTR[k].prefix) {
 				var sel=selector.parseSelector(ATTR[k].prefix);
-				if (!parentreset[sel.tag]) parentreset[sel.tag]=[];
-				parentreset[sel.tag].push({tag:i,attr:k});
-				//console.log("PREFIX",ATTR[k].prefix,i,k)
 			}
 		}
 	}	
@@ -136,17 +132,6 @@ var defaulttaghandler=function(taginfo) {
 	if (!tags[k]) tags[k]={ _count:0};
 	tags[k]._count++;
 	
-	if (parentreset[k]) {
-		var children=parentreset[k];
-		for (var j in children) {
-			var T=children[j];
-			var ti=ctx.schema[T.tag].indexattributes[T.attr];
-			if (ti.autoinc) {
-				ti.lastval="0";
-				ti.inc=1;
-			}
-		}
-	}
 	if (taginfo.newslot) {
 		if (taginfo.opentag) {
 			this.addslottext();

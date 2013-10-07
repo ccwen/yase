@@ -109,8 +109,8 @@ var newfile=function(fn){
 	//console.log('start from ',ctx.lastpos)
 	ctx.totallinebreakcount+=ctx.linebreakcount;
 }
+var sax= require("./sax");
 var validatexml=function(buf){
-	var sax= require("./sax");
 	var parser = sax.parser(true);
 	var that=this;
 	parser.onerror = function (e) {
