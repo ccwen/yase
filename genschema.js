@@ -31,6 +31,11 @@ Genschema=function() {
 		if (typeof tags=='string') tags=[tags];
 		addtags.apply(this,[tags,{emptytag:true,newslot:false,savepos:true,savehead:false}]);
 		return this;
+	}
+	this.pagebreak=function(tags) {
+		if (typeof tags=='string') tags=[tags];
+		addtags.apply(this,[tags,{handler:'pb',emptytag:true,newslot:false,savepos:true,savehead:false}]);
+		return this;
 	}	
 	this.attr=function(tags,attrs,opts) {
 		opts=opts||{};

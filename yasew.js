@@ -109,10 +109,21 @@ var newfile=function(fn){
 	//console.log('start from ',ctx.lastpos)
 	ctx.totallinebreakcount+=ctx.linebreakcount;
 }
+var validatexml=function(buf){
+	var sax= require("./sax");
+	var parser = sax.parser(true);
+	var that=this;
+	parser.onerror = function (e) {
+		abortbuilding.apply(that,[e]);
+	};			
+	parser.write(buf);
+}
 var indexbuffer=function(B,fn) {
-	B=this.buffer=B.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+	B=this.buffer=B.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/\r/g,'\n');
+
 	var ctx=this.context;
 	newfile.apply(this,[fn]);
+	if (this.options.validatexml) validatexml.apply(this,[B]);
 	
 	var i=0,intag=false;
 

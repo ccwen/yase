@@ -68,7 +68,7 @@ var iddepth2tree=function(obj,id,ntag,depth,I ,tagname) {
 		this.abortbuilding('id depth exceed',idarr,depth);
 		return;
 	}
-	while (idarr.length<depth) idarr.push('0');
+	while (idarr.length<depth) idarr.push(' ');
 	for (var i=0;i<idarr.length-1;i++) {
 		if (!obj[ idarr[i]]) obj[ idarr[i]]={};
 		obj = obj[ idarr[i]];

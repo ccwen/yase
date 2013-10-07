@@ -319,9 +319,9 @@ var getTextByTag=function(opts) {
 	}
 
 	var t=this.getTag(opts.tag,tagseq);
-	t.id=this.getTagAttr(opts.tag, tagseq, opts.attr || 'id');
+	t.id=this.getTagAttr(opts.tag, tagseq, opts.attribute || 'id');
 	var t2=this.getTag(opts.tag,1+tagseq);
-	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attr || 'id');
+	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attribute || 'id');
 
 	var seqarr=[];
 	opts.extraslot=opts.extraslot||0;
@@ -382,7 +382,6 @@ var closestTag=function(tagname,nslot,opts) {
 			if (!vposarr) throw 'undefiend TAG '+sel.tag;
 			var c=binarysearch.closest( vposarr,nslot*this.meta.slotsize );
 			var tag=this.getTag(sel.tag,c);
-			console.log('closest',c)
 			if (sel.key) {
 				tag.value=this.getTagAttr(sel.tag,c,sel.key);
 				var tried=100; //this should be enough
@@ -439,9 +438,10 @@ var buildToc=function(toc,opts) {
 		if (opts.hidenohit && hits && !hits[i]) continue;
 		var sel=Tree[T[i][0]];
 		var tag=this.getTag(sel.tag,T[i][2]);
-		var title=tag.head;
+		var head=tag.head||"";
 		if (sel.key) title=this.getTagAttr(sel.tag,T[i][2],sel.key);
-		var tocnode={depth:T[i][0], title:title, slot: tag.slot, hit:0 };
+		else title="";
+		var tocnode={depth:T[i][0], title:title, head:head,slot: tag.slot, hit:0 };
 		if (hits && hits[i]) tocnode.hit=hits[i];
 		output.push(tocnode);
 	}

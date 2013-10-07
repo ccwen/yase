@@ -5,8 +5,7 @@ var Yasew=require('./yasew');
 var blob=require('./blob');
 var fs=require('fs');
 var getfiles=function( filelist , maxfile) {
-
-	var files=fs.readFileSync(filelist,'utf8').replace(/\r\n/g,'\n').split('\n');
+	var files=fs.readFileSync(filelist,'utf8').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');	
 	var output=[];
 	var maxfile=maxfile||0;
 	for (var i=0;i<files.length;i++) {
@@ -23,6 +22,7 @@ var outback = function (s) {
     for (var i = 0; i < l; i++) s += String.fromCharCode(8);
     process.stdout.write(s);
 }
+
 module.exports=function( config ) {
 	if (!config.input) {
 		console.warn('missing input file');
@@ -64,7 +64,8 @@ module.exports=function( config ) {
 
     for (var i in files) {
     	outback(files[i]);
-       	ydb.indexbuffer(fs.readFileSync(fileprefix+files[i],config.encoding),  files[i]);
+    	var buf=fs.readFileSync(fileprefix+files[i],config.encoding);
+       	ydb.indexbuffer(buf,  files[i]);
     }
 
     if (config.blob) blob.add(config.blob,ydb.output);
