@@ -67,13 +67,16 @@ var findTag=function(opts) {
 	var o=opts;
 	if (opts.selector) o=se.parseSelector(opts.selector);
 	if (typeof o.value=='object') {
-		var t=[];
+		var tags=[];
 		for (var i in o.value) {
-			t.push(se.findTag(o.tag,o.attribute,o.value[i]));
+			var t=se.findTag(o.tag,o.attribute,o.value[i]);
+			if (t) t.db=opts.db;
+			tags.push(t);;
 		}
-		return t;
+		return tags;
 	} else {
 		var t=se.findTag(o.tag,o.attribute,o.value);	
+		if (t) t.db=opts.db;
 		return t;
 	}
 	
@@ -81,6 +84,7 @@ var findTag=function(opts) {
 var getTagInRange=function(opts) {
 	var se=yase(opts.db);
 	var res=se.getTagInRange(opts.start,opts.end,opts.tag,opts);
+	if (res) res.db=opts.db;
 	return res;
 }
 var getTextRange=function(opts) {
@@ -99,6 +103,12 @@ var enumydb=function() {
 		output [ fullname] ='\0'; //pretend to be loaded
 	}
 	return output;
+}
+var keyExists=function(path) { //path including database name
+	var dbname=path.shift();
+	dbname=dbname.replace(':','/');
+	var se=yase(dbname);
+	return se.exists(path);
 }
 var getRaw=function(path) { //path including database name
 	var res=null;
@@ -173,6 +183,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	getText:getText,
 	fillText:fillText,
 	exist:exist,
+	keyExists:keyExists,
 	getRange:getRange,
 	getTextByTag:gettextbytag,
 	getTagAttr:gettagattr,

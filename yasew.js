@@ -185,6 +185,7 @@ var initialize=function(options,context,output) {
 var packmeta=function(options,context,output) {
 	var meta=output.meta;
 	if (options.dbid) meta.dbid=options.dbid;
+	if (options.linkto) meta.linkto=options.linkto;
 	if (options.author) meta.author=options.author;
 	if (options.url) meta.url=options.url;
 	if (options.min_yase_version) meta.min_yase_version=options.min_yase_version;
@@ -193,6 +194,7 @@ var packmeta=function(options,context,output) {
 	meta.slotcount=context.slotcount;
 	meta.tokencount=context.tokencount;
 	meta.slotperbatch=options.slotperbatch;
+
 	if (options.toc) meta.toc=options.toc;
 	meta.slotshift=context.slotshift; //this might be changed
 	meta.version=options.version || '0.0.0';
