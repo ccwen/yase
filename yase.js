@@ -303,6 +303,12 @@ var getTagInRange=function(start,end,tagname,opts) {
 
 var getTextByTag=function(opts) {
 	var maxslot=opts.maxslot || 1000;
+	if (opts.selector) {
+		sel=selector.parseSelector(opts.selector);
+		opts.tag=sel.tag;
+		opts.attribute=sel.attribute;
+		opts.value=sel.value;
+	}
 	if (typeof opts.ntag !='undefined') {
 		tagseq=parseInt(opts.ntag);
 	} else {
