@@ -62,24 +62,43 @@ var fuzzysearch=function(opts) {
 	return res;
 }
 
+var findTagBySelectors=function(opts) {
+	var start=0, o={}, out=[];
+	for (var i in opts.selectors) {
+		o.db=opts.db;
+		o.selector=opts.selectors[i];
+		o.start=start;
+		var r=findTag(o);
+		if (r&&r[0].slot) start=r[0].slot;
+		out.push(r[0]);
+	}
+	return out;
+}
 var findTag=function(opts) {
 	var se=yase(opts.db);
-	var o=opts;
+	opts.slot=opts.slot||0;
+	var o=opts, tags=[];
 	if (opts.selector) o=se.parseSelector(opts.selector);
 	if (typeof o.value=='object') {
-		var tags=[];
+		
 		for (var i in o.value) {
 			var t=se.findTag(o.tag,o.attribute,o.value[i]);
 			if (t) t.db=opts.db;
-			tags.push(t);;
+			if (t.slot>slot) tags.push(t);
 		}
 		return tags;
 	} else {
-		var t=se.findTag(o.tag,o.attribute,o.value);	
-		if (t) t.db=opts.db;
-		return t;
+		var t=se.findTag(o.tag,o.attribute,o.value);
+		if (!Array.isArray(t)) {
+			t=[t];
+		}
+		for (var i in t) {
+			if (t[i].slot<opts.start) continue;
+			t[i].db=opts.db;
+			tags.push(t[i]);
+		}
 	}
-	
+	return tags;
 }
 var getTagInRange=function(opts) {
 	var se=yase(opts.db);
@@ -194,6 +213,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	phraseSearch:phraseSearch,
 	closestTag:closestTag,
 	findTag:findTag,
+	findTagBySelectors:findTagBySelectors,
 	getRaw:getRaw,
 	getBlob:getBlob,
 	version: function() { return require('./package.json').version },
