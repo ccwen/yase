@@ -283,18 +283,28 @@ var getRange=function(start,end,opts) {
 var getTagInRange=function(start,end,tagname,opts) {
 	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
 	var startvpos=start*this.meta.slotsize;
+	if (end==-1) end=this.meta.slotcount;
 	var endvpos=end*this.meta.slotsize;
-	var out=[];
+	var out=[],count=0;
+	opts.maxcount=opts.maxcount||100;
 	for (var i=0;i<vpos.length;i++) {
 		if (vpos[i]>=startvpos && vpos[i]<endvpos) {
 			var T=this.getTag(tagname,i);
 			T.values={};
-			if (opts.attributes) for (var k in opts.attributes) {
-				var attr=opts.attributes[k];
-				var v=this.getTagAttr(tagname , i, attr);
-				T.values[attr]=v;
-			}
+			if (opts.attributes) {
+				var hasvalue=false;
+				for (var k in opts.attributes) {
+					var attr=opts.attributes[k];
+					var v=this.getTagAttr(tagname , i, attr);
+					T.values[attr]=v;
+					T.seq=i;
+					//T.value=v;
+					if (v) hasvalue=true;
+				}
+				if (hasvalue) count++; //count only with value
+			} else count++;
 			out.push(T);
+			if (count>=opts.maxcount) break;
 		}
 	}
 	return out;
@@ -350,6 +360,27 @@ var getTagPosting=function(tagname) {
 }
 var findTag=function(tagname,attributename,value) {
 	return this.customfunc.findTag.apply(this,[tagname,attributename,value]);
+}
+
+var firstTag=function(tagname,attributename){
+	var first=function(obj) { for (var a in obj) return a;}
+
+	if (!attributename) {
+		throw 'not implement yet';
+	} else {
+		var path=['tags',tagname,attributename+'='];
+		var t=this.get(path);
+		while (typeof t=='object') {
+			path.push(first(t));
+			t=this.get(path);
+		}
+		return this.getTag(tagname,t);
+	}
+}
+var firstTagAfter=function(tagname,attributename,start) {
+	if (!start) return firstTag.apply(this,[tagname,attributename]);
+	var tags=getTagInRange.apply(this,[start,-1,tagname,{attributes:[attributename],maxcount:1}]);
+	return tags;
 }
 var findTagBySelector=function(selector) {
 	var T=selector.parseSelector(selector);
@@ -512,6 +543,7 @@ var yase_use = function(fn,opts) {
 		instance.getTag=getTag;
 		instance.getTagPosting=getTagPosting;
 		instance.findTag=findTag;
+		instance.firstTagAfter=firstTagAfter;
 		instance.findTagBySelector=findTagBySelector;
 		instance.getTagAttr=getTagAttr;
 

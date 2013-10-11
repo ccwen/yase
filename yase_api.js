@@ -74,6 +74,8 @@ var findTagBySelectors=function(opts) {
 	}
 	return out;
 }
+
+
 var findTag=function(opts) {
 	var se=yase(opts.db);
 	opts.slot=opts.slot||0;
@@ -88,14 +90,18 @@ var findTag=function(opts) {
 		}
 		return tags;
 	} else {
-		var t=se.findTag(o.tag,o.attribute,o.value);
-		if (!Array.isArray(t)) {
-			t=[t];
-		}
-		for (var i in t) {
-			if (t[i].slot<opts.start) continue;
-			t[i].db=opts.db;
-			tags.push(t[i]);
+		if (o.key) { //get the first tag with key
+			tags=se.firstTagAfter(o.tag,o.key,opts.start);
+		} else {
+			var t=se.findTag(o.tag,o.attribute,o.value);
+			if (!Array.isArray(t)) {
+				t=[t];
+			}
+			for (var i in t) {
+				if (t[i].slot<opts.start) continue;
+				t[i].db=opts.db;
+				tags.push(t[i]);
+			}
 		}
 	}
 	return tags;
