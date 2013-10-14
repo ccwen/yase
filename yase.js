@@ -18,7 +18,7 @@ var getPostingById=function(id) {
 	var r=this.get(idarr,true);
 	return r;
 }
-var expandKeys=function(fullpath,path,max) {
+var expandKeys=function(fullpath,path,opts) {
 	var out=[];
 	path=JSON.parse(JSON.stringify(path))
 	path.unshift('postings')
@@ -39,6 +39,8 @@ var expandKeys=function(fullpath,path,max) {
 	
 	for (var i in out1) {
 		var lead=out1[i];
+		var sim=lead;
+
 		if (path[path.length-1] && prefix!=" ") {
 			lead=lead.substring(0, prefix.length);
 		}
@@ -46,37 +48,57 @@ var expandKeys=function(fullpath,path,max) {
 		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
 		if (this.customfunc.simplifiedToken) {
 			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
+			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
 		}
 		
 		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
 			//console.log('hit',out1[i])
+
 			var start=0;
 			if (path[path.length-1] && prefix!=" ") start=prefix.length;
 
 			//if (out1[i]==" ") out.push(path.join(""));
 			if (path.length<fullpath.length-1 && out1[i]!=" ") {
+
+				if (opts.exact && out1[i]!=fullpath[path.length] &&
+						sim!=fullpath[path.length]) continue;
+				
 				path.push(out1[i]);
-				//console.log('p',path);
-				out=out.concat(expandKeys.apply(this,[fullpath,path,max]));
+				out=out.concat(expandKeys.apply(this,[fullpath,path,opts]));	
 				path.pop();
 			} else {
-				out.push(path.join("")+out1[i].trim());
+				if (opts.exact) {
+					if (out1[i]==fullpath[path.length] || 
+						sim==fullpath[path.length]) {
+						out.push(path.join("")+out1[i].trim());		
+					}
+				} else {
+					out.push(path.join("")+out1[i].trim());	
+				}
 			}
-			if (out.length>=max) break;
+			if (out.length>=opts.max) break;
 		}
 	}
-
 	return out;
 }
 var expandToken=function(token,opts) {
 	//see test/yase-test.js for spec
+	if (!this.customfunc.simplifiedToken) return false;
+
 	opts=opts||{};
-	var max=opts.max||50;
+	opts.max=opts.max||30;
 	var count=0;
 	var out=[];
 	var tree=this.customfunc.token2tree(token);
+	var keys=expandKeys.apply(this, [ tree,[],opts ]);
+	var simplified=[];
+	if (this.customfunc.simplifiedToken) {
+		for (var i in keys) {
+			simplified.push(this.customfunc.simplifiedToken(keys[i]));
+		}
+	} else simplified=keys;
+	return { raw:keys ,simplified:simplified};
 
-	return expandKeys.apply(this, [ tree,[],max ]);
 }
 var highlight=function(opts) {
 	var tokens=opts.tokenize.apply(this,[opts.text]);
@@ -178,6 +200,29 @@ var trimbyrange=function(g, start,end) {
 	return out;
 }
 var profile=false;
+var loadtoken=function(token) {
+	if (token.trim()[0]=='<') return false;
+	var t=this.customfunc.normalizeToken?
+		this.customfunc.normalizeToken.apply(this,[token]):token;
+	
+	var expandtokens=expandToken.apply(this,[ t , {exact:true}]);
+	var posting=null;
+	if (expandtokens){
+		tokens=expandtokens.raw;
+		if (tokens.length==1) {
+			posting=this.getPostingById(tokens[0]);	
+		} else {
+			var postings=[];
+			for (var i in tokens) {
+				postings.push(this.getPostingById(tokens[i]));
+			}
+			posting=plist.combine(postings);
+		}
+	} else {
+		posting=this.getPostingById(t);	
+	}	
+	return posting;
+}
 var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
 	if (!tokenize) throw 'no tokenizer';
@@ -195,24 +240,23 @@ var phraseSearch=function(tofind,opts) {
 	} else {
 		if (profile) console.time('get posting');
 		for (var i in tokens) {
-			if (tokens[i].trim()[0]=='<') continue;
-			var t=this.customfunc.normalizeToken?
-				this.customfunc.normalizeToken.apply(this,[tokens[i]]):tokens[i];
-			var posting=this.getPostingById(t);
-			postings.push(posting);
+			var posting=loadtoken.apply(this,[tokens[i]])
+			if (posting) postings.push(posting);
 		}
 		if (profile) console.timeEnd('get posting');
 		if (profile) console.time('phrase merge')
 		if (!raw) raw=plist.plphrase(postings);
 		if (profile) console.timeEnd('phrase merge')
-		if (profile) console.time('group block')
-		if (opts.raw) return raw;
-		//console.log(raw)
+		if (profile) console.time('group block');
+		
+
 		var g=plist.groupbyblock(raw, this.meta.slotshift);
 		if (profile) console.timeEnd('group block')		
 		if (this.phrasecache) this.phrasecache[tofind]=g;
 		if (this.phrasecache_raw) this.phrasecache_raw[tofind]=raw;
 	}
+	if (opts.rawcountonly) return raw.length;
+	if (opts.raw) return raw;
 
 	if (tag) {
 		pltag=this.getTagPosting(tag);
@@ -220,6 +264,7 @@ var phraseSearch=function(tofind,opts) {
 		//if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
 		
 		raw=plist.plhead(raw, pltag );
+		if (opts.rawcountonly) return raw.count;
 		g=plist.groupbyblock(raw, this.meta.slotshift);
 	}
 	//trim by range
@@ -247,7 +292,7 @@ var phraseSearch=function(tofind,opts) {
 		}
 		g=o;
 	}
-	if (opts.raw) return raw;
+	
 	if (opts.grouped) return g;
 	if (profile) console.time('highlight')
 	var R="";

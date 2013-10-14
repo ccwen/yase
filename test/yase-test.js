@@ -19,38 +19,6 @@ vows.describe('yadm 4 test suite').addBatch({
 		var r=topic.findTag('pb.V','n','1.0001');
 		assert.equal(r[0].ntag,0,'findtag');
 	},
-	},
-
-	'tokens': {
- 		topic: function () {
-        	var db=new Yase('../../../cst/vrimul.ydb',{nowatch:true})
-        	return db;
-		},
-		expand:function(topic) {
-			
-			var expanded=topic.expandToken('manus',{max:200});
-			
-			assert.equal( expanded.indexOf('manusso')>-1,true )
-			assert.equal( expanded.indexOf('mānusenapi')>-1,true )
-
-			//assert.deepEqual(['ma','mā'],expanded);
-			//for (var i=0;i<expanded.length&&i<10;i++) console.log(expanded[i])
-			//console.log(expanded.length)sa
-		},
-		expand2:function(topic) {
-			var expanded=topic.expandToken('buddham',{max:200});
-			console.log(expanded)
-		},
-		expand3:function(topic) {
-			var expanded=topic.expandToken('māh',{max:200});
-			console.log(expanded)
-		},
-		expand4:function(topic) {
-			var expanded=topic.expandToken('buddha',{max:200});
-			console.log(expanded)
-		}		
-
-	}	
-	
+	}
 
 }).export(module); // Export the Suite

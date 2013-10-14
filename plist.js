@@ -150,6 +150,14 @@ var pland = function (pl1, pl2, distance) {
   }
   return r;
 }
+var combine=function (postings) {
+  var out=[];
+  for (var i in postings) {
+    out=out.concat(postings[i]);
+  }
+  out.sort(function(a,b){return a-b});
+  return out;
+}
 var plphrase = function (postings) {
 	
   var r = [];
@@ -174,5 +182,6 @@ plist.plhead=plhead;
 plist.groupbyblock=groupbyblock;
 plist.groupbyposting=groupbyposting;
 plist.groupsum=groupsum;
+plist.combine=combine;
 module.exports=plist;
 return plist;
