@@ -31,6 +31,11 @@ var expandKeys=function(fullpath,path,max) {
 	} else {
 		prefix="" ;//final
 	}
+	out1=out1.sort(function(a,b){
+		if (a<b) return -1;
+		else if (a>b) return 1;
+		else return 0;
+	});
 	
 	for (var i in out1) {
 		var lead=out1[i];
@@ -43,7 +48,7 @@ var expandKeys=function(fullpath,path,max) {
 			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
 		}
 		
-		if (leadsim==prefix || lead==" " || prefix==" ") {
+		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
 			//console.log('hit',out1[i])
 			var start=0;
 			if (path[path.length-1] && prefix!=" ") start=prefix.length;
@@ -61,13 +66,12 @@ var expandKeys=function(fullpath,path,max) {
 		}
 	}
 
-	debugger;
 	return out;
 }
 var expandToken=function(token,opts) {
 	//see test/yase-test.js for spec
 	opts=opts||{};
-	var max=opts.max||20;
+	var max=opts.max||50;
 	var count=0;
 	var out=[];
 	var tree=this.customfunc.token2tree(token);

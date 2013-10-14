@@ -35,9 +35,20 @@ vows.describe('yadm 4 test suite').addBatch({
 
 			//assert.deepEqual(['ma','mā'],expanded);
 			//for (var i=0;i<expanded.length&&i<10;i++) console.log(expanded[i])
-			//console.log(expanded.length)
-		}
-
+			//console.log(expanded.length)sa
+		},
+		expand2:function(topic) {
+			var expanded=topic.expandToken('buddham',{max:200});
+			console.log(expanded)
+		},
+		expand3:function(topic) {
+			var expanded=topic.expandToken('māh',{max:200});
+			console.log(expanded)
+		},
+		expand4:function(topic) {
+			var expanded=topic.expandToken('buddha',{max:200});
+			console.log(expanded)
+		}		
 
 	}	
 	
