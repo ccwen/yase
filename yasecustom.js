@@ -107,10 +107,10 @@ var token2tree=function(tk) {
 		while (i<tk.length) {
 			key+=tk[i];
 			if (vowels.indexOf(tk[i])>-1) {
-				if (tk[i+1]=='ṅ' || tk[i+1]=='ṃ') { //not a stand alone consonant
-					i++;
-					key+=tk[i];
-				}
+				//if (tk[i+1]=='ṅ' || tk[i+1]=='ṃ') { //not a stand alone consonant
+				//	i++;
+				//	key+=tk[i];
+				//}
 				res.push(key);
 				key="";
 				if (res.length>=3) {

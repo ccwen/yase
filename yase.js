@@ -18,6 +18,62 @@ var getPostingById=function(id) {
 	var r=this.get(idarr,true);
 	return r;
 }
+var expandKeys=function(fullpath,path,max) {
+	var out=[];
+	path=JSON.parse(JSON.stringify(path))
+	path.unshift('postings')
+	var out1=this.keys(path);
+	path.shift();
+
+	var prefix=" ";
+	if (path.length<fullpath.length) {
+		prefix=fullpath[path.length];
+	} else {
+		prefix="" ;//final
+	}
+	
+	for (var i in out1) {
+		var lead=out1[i];
+		if (path[path.length-1] && prefix!=" ") {
+			lead=lead.substring(0, prefix.length);
+		}
+
+		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
+		if (this.customfunc.simplifiedToken) {
+			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
+		}
+		
+		if (leadsim==prefix || lead==" " || prefix==" ") {
+			//console.log('hit',out1[i])
+			var start=0;
+			if (path[path.length-1] && prefix!=" ") start=prefix.length;
+
+			//if (out1[i]==" ") out.push(path.join(""));
+			if (path.length<fullpath.length-1 && out1[i]!=" ") {
+				path.push(out1[i]);
+				//console.log('p',path);
+				out=out.concat(expandKeys.apply(this,[fullpath,path,max]));
+				path.pop();
+			} else {
+				out.push(path.join("")+out1[i].trim());
+			}
+			if (out.length>=max) break;
+		}
+	}
+
+	debugger;
+	return out;
+}
+var expandToken=function(token,opts) {
+	//see test/yase-test.js for spec
+	opts=opts||{};
+	var max=opts.max||20;
+	var count=0;
+	var out=[];
+	var tree=this.customfunc.token2tree(token);
+
+	return expandKeys.apply(this, [ tree,[],max ]);
+}
 var highlight=function(opts) {
 	var tokens=opts.tokenize.apply(this,[opts.text]);
 	var i=0,j=0,last=0,voff=0,now=0;
@@ -217,7 +273,7 @@ var phraseSearch=function(tofind,opts) {
 	
 }
 var getKeys=function(id) {
-	throw 'not implemented'
+	return this.getkeys(id);
 }
 //return range of id given start and end
 
@@ -298,10 +354,10 @@ var getTagInRange=function(start,end,tagname,opts) {
 					var v=this.getTagAttr(tagname , i, attr);
 					T.values[attr]=v;
 					T.seq=i;
-					//T.value=v;
 					if (v) hasvalue=true;
 				}
 				if (hasvalue) count++; //count only with value
+				else if (opts.withattributeonly) continue;
 			} else count++;
 			out.push(T);
 			if (count>=opts.maxcount) break;
@@ -379,7 +435,7 @@ var firstTag=function(tagname,attributename){
 }
 var firstTagAfter=function(tagname,attributename,start) {
 	if (!start) return firstTag.apply(this,[tagname,attributename]);
-	var tags=getTagInRange.apply(this,[start,-1,tagname,{attributes:[attributename],maxcount:1}]);
+	var tags=getTagInRange.apply(this,[start,-1,tagname,{attributes:[attributename],maxcount:1,withattributeonly:true}]);
 	return tags;
 }
 var findTagBySelector=function(selector) {
@@ -555,6 +611,7 @@ var yase_use = function(fn,opts) {
 		instance.sourceInfo=sourceInfo;
 		instance.getTagInRange=getTagInRange;
 		instance.genToc=genToc;
+		instance.expandToken=expandToken;
 		instance.buildToc=buildToc;
 		instance.phrasecache={};
 		instance.phrasecache_raw={};

@@ -4,6 +4,7 @@
 var Yasew=require('./yasew');
 var blob=require('./blob');
 var fs=require('fs');
+
 var getfiles=function( filelist , maxfile) {
 	var files=fs.readFileSync(filelist,'utf8').replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');	
 	var output=[];

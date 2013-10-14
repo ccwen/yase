@@ -43,7 +43,7 @@ Genschema=function() {
 		if (typeof attrs=='string') attrs=[attrs];
 		for (var i in tags) {
 			if (!this.schema[tags[i]]) continue;
-			var I={};
+			var I=this.schema[tags[i]].indexattributes||{};
 			for (var j in attrs) {
 				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', 
 				unique: opts.unique, 

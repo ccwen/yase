@@ -49,7 +49,7 @@ var loadschema=function(S) {
 	else this.abortbuilding('no schema');	
 	return JSON.parse(JSON.stringify(S));
 }
-var iddepth2tree=function(obj,id,ntag,depth,I ,tagname) {
+var iddepth2tree=function(obj,id,ntag,depth,I ,tagname,attrname) {
 	var idarr=null;
 	var ctx=this.context;
 	var opt=this.options;
@@ -73,7 +73,7 @@ var iddepth2tree=function(obj,id,ntag,depth,I ,tagname) {
 	var putvalue=function(val) {
 		if (typeof obj[val] !=='undefined') {
 			if (I.unique) {
-				this.warnbuilding('repeated val:',val,', tagname:',tagname);
+				this.warnbuilding('repeated val:',val,', tagname:',tagname,',attribute',attrname);
 			} else {
 				if (typeof obj[val]=='number') obj[val]=[ obj[val] ] ; // convert to array
 				obj[val].push(ntag);
@@ -186,6 +186,7 @@ var defaulttaghandler=function(taginfo) {
 
 	if (taginfo.indexattributes && taginfo.opentag) 
 	for (var i in taginfo.indexattributes) {
+//		console.log(taginfo.tagname,i)
 		var I=taginfo.indexattributes[i];
 		var attrkey=i+'=';
 		if (!tags[k][attrkey]) tags[k][attrkey]={};
@@ -205,7 +206,7 @@ var defaulttaghandler=function(taginfo) {
 			}
 			var depth=I.depth || 1;
 			iddepth2tree.apply(this,[tags[k][attrkey], val,
-				 tags[k]._vpos.length -1,  depth, I , taginfo.tagname]);
+				 tags[k]._vpos.length -1,  depth, I , taginfo.tagname,i]);
 			if (I.savehead) {
 				taginfo.saveheadkey=attrkey+val;
 			}

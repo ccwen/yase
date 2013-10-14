@@ -52,7 +52,11 @@ var customfunc=function( opts) {
 	var se=yase(opts.db);
 	return se.customfunc[opts.name].apply(se,opts.params);
 }
-
+var expandToken=function(opts) {
+	var se=yase(opts.db);
+	var res=se.expandToken(opts.token,opts);
+	return res;
+}
 var fuzzysearch=function(opts) {
 	var se=yase(opts.db);
 	se.phrasecache=se.phrasecache||{};
@@ -209,6 +213,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	fillText:fillText,
 	exist:exist,
 	keyExists:keyExists,
+	expandToken:expandToken,
 	getRange:getRange,
 	getTextByTag:gettextbytag,
 	getTagAttr:gettagattr,
