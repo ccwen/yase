@@ -209,14 +209,23 @@ var trimbyrange=function(g, start,end) {
 }
 var profile=false;
 var loadtoken=function(token) {
+	token=token.trim();
 	if (token.trim()[0]=='<') return false;
-	if (token[token.length-1]=='^') {
-		return this.getPostingById(token.substring(0,token.length-1));
+
+	var lastchar=token[token.length-1];
+	if (lastchar=='^' || lastchar=='*') {
+		token=token.substring(0,token.length-1);
 	}
+	if (lastchar=='^') { //do not expand if ends with ^
+		return this.getPostingById(token);
+	}
+	var exact=true;
+	if (lastchar=='*') exact=false; //automatic prefix
+	
 	var t=this.customfunc.normalizeToken?
 		this.customfunc.normalizeToken.apply(this,[token]):token;
 	
-	var expandtokens=expandToken.apply(this,[ t , {exact:true}]);
+	var expandtokens=expandToken.apply(this,[ t , {exact:exact}]);
 	var posting=null;
 	if (expandtokens){
 		tokens=expandtokens.raw;
