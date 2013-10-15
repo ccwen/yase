@@ -105,7 +105,7 @@ var expandToken=function(token,opts) {
 	} else simplified=keys;
 	var counts=[];
 	
-	return { raw:keys ,simplified:simplified, count: count};
+	return { raw:keys ,simplified:simplified, count: count, more: keys.length>=opts.max};
 
 }
 var highlight=function(opts) {
