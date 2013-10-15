@@ -91,13 +91,21 @@ var expandToken=function(token,opts) {
 	var out=[];
 	var tree=this.customfunc.token2tree(token);
 	var keys=expandKeys.apply(this, [ tree,[],opts ]);
-	var simplified=[];
+	var simplified=[],count=[];
 	if (this.customfunc.simplifiedToken) {
 		for (var i in keys) {
 			simplified.push(this.customfunc.simplifiedToken(keys[i]));
+
+			if (opts.count) {
+				var postings=this.getPostingById(keys[i]);
+				if (postings) count.push(postings.length);
+				else count.push(0)
+			}
 		}
 	} else simplified=keys;
-	return { raw:keys ,simplified:simplified};
+	var counts=[];
+	
+	return { raw:keys ,simplified:simplified, count: count};
 
 }
 var highlight=function(opts) {
@@ -202,6 +210,9 @@ var trimbyrange=function(g, start,end) {
 var profile=false;
 var loadtoken=function(token) {
 	if (token.trim()[0]=='<') return false;
+	if (token[token.length-1]=='^') {
+		return this.getPostingById(token.substring(0,token.length-1));
+	}
 	var t=this.customfunc.normalizeToken?
 		this.customfunc.normalizeToken.apply(this,[token]):token;
 	
@@ -227,7 +238,7 @@ var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
 	if (!tokenize) throw 'no tokenizer';
 	var postings=[];
-	var tokens=tokenize.apply(this,[tofind]);
+	var tokens=tokenize.apply(this,[tofind.trim()]);
 	var g=null,raw=null;
 	var tag=opts.tag||"";
 	opts.array =true; //default output format
