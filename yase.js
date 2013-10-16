@@ -246,6 +246,7 @@ var loadtoken=function(token) {
 var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
 	if (!tokenize) throw 'no tokenizer';
+	if (!tofind) return [];
 	var postings=[];
 	var tokens=tokenize.apply(this,[tofind.trim()]);
 	var g=null,raw=null;
