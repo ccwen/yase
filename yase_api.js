@@ -90,7 +90,7 @@ var findTag=function(opts) {
 		for (var i in o.value) {
 			var t=se.findTag(o.tag,o.attribute,o.value[i]);
 			if (t) t.db=opts.db;
-			if (t.slot>slot) tags.push(t);
+			if (t.slot>opts.slot) tags.push(t);
 		}
 		return tags;
 	} else {
