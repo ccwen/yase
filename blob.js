@@ -1,11 +1,51 @@
-var wrench=require('./wrench');
 var fs=require('fs');
+
+/*  wrench.readdirSyncRecursive("directory_path");
+ *
+ *  Recursively dives through directories and read the contents of all the
+ *  children directories.
+ */
+var readdirSyncRecursive = function(baseDir) {
+    baseDir = baseDir.replace(/\/$/, '');
+var _path = require("path");
+var readdirSyncRecursive = function(baseDir) {
+        var files = [],
+            curFiles,
+            nextDirs,
+            isDir = function(fname){
+                return fs.statSync( _path.join(baseDir, fname) ).isDirectory();
+            },
+            prependBaseDir = function(fname){
+                return _path.join(baseDir, fname);
+            };
+
+        curFiles = fs.readdirSync(baseDir);
+        nextDirs = curFiles.filter(isDir);
+        curFiles = curFiles.map(prependBaseDir);
+
+        files = files.concat( curFiles );
+
+        while (nextDirs.length) {
+            files = files.concat( readdirSyncRecursive( _path.join(baseDir, nextDirs.shift()) ) );
+        }
+
+        return files;
+    };
+
+    // convert absolute paths to relative
+    var fileList = readdirSyncRecursive(baseDir).map(function(val){
+        return _path.relative(baseDir, val);
+    });
+
+    return fileList;
+};
+
 /*add blob recursively from file system*/
 var addblob=function(blobsetting, output) {
 	output.blob={};
 	for (var i in blobsetting) {
 		var subdir=blobsetting[i];
-		var blobs=wrench.readdirSyncRecursive(subdir);
+		var blobs=readdirSyncRecursive(subdir);
 		//create subfolder
 		var O=output.blob[i]={};
 	    for (var i in blobs) {
