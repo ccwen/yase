@@ -135,21 +135,43 @@ var pland = function (pl1, pl2, distance) {
   var swap = 0;
   
   if (pl1.length > pl2.length) { //swap for faster compare
-	var t = pl2;
-	pl2 = pl1;
-	pl1 = t;
-	swap = distance;
-	distance = -distance;
+    var t = pl2;
+    pl2 = pl1;
+    pl1 = t;
+    swap = distance;
+    distance = -distance;
   }
   for (var i = 0; i < pl1.length; i++) {
-	var k = sortedIndex(pl2, pl1[i] + distance);
-	var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
-	if (t > -1) {
-	  r.push(pl1[i] - swap);
-	}
+    var k = sortedIndex(pl2, pl1[i] + distance);
+    var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
+    if (t > -1) {
+      r.push(pl1[i] - swap);
+    }
   }
   return r;
 }
+var plandnot = function (pl1, pl2, distance) {
+  var r = [];
+  var swap = 0;
+  
+  if (pl1.length > pl2.length) { //swap for faster compare
+    var t = pl2;
+    pl2 = pl1;
+    pl1 = t;
+    swap = distance;
+    distance = -distance;
+  }
+
+  for (var i = 0; i < pl1.length; i++) {
+    var k = sortedIndex(pl2, pl1[i] + distance);
+    var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
+    if (t == -1) {
+      r.push(pl1[i] - swap);
+    }
+  }
+  return r;
+}
+
 var combine=function (postings) {
   var out=[];
   for (var i in postings) {
@@ -158,7 +180,7 @@ var combine=function (postings) {
   out.sort(function(a,b){return a-b});
   return out;
 }
-var plphrase = function (postings) {
+var plphrase = function (postings,ops) {
 	
   var r = [];
   for (var i=0;i<postings.length;i++) {
@@ -168,7 +190,11 @@ var plphrase = function (postings) {
 	if (0 === i) {
 	  r = postings[0];
 	} else {
-	  r = pland(r, postings[i], i);
+    if (ops[i]=='andnot') {
+      r = plandnot(r, postings[i], i);  
+    }else {
+      r = pland(r, postings[i], i);  
+    }
 	}
   }
   

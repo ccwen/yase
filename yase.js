@@ -209,6 +209,7 @@ var trimbyrange=function(g, start,end) {
 }
 var profile=false;
 var loadtoken=function(token) {
+	var op='and';
 	token=token.trim();
 	if (token.trim()[0]=='<') return false;
 
@@ -219,6 +220,11 @@ var loadtoken=function(token) {
 	if (lastchar=='^') { //do not expand if ends with ^
 		return this.getPostingById(token);
 	}
+	if (lastchar=='!') {
+		op='andnot';
+		token=token.substring(0,token.length-1)
+	}
+
 	var exact=true;
 	if (lastchar=='*') exact=false; //automatic prefix
 	
@@ -241,7 +247,7 @@ var loadtoken=function(token) {
 	} else {
 		posting=this.getPostingById(t);	
 	}	
-	return posting;
+	return {posting:posting,op:op};
 }
 var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
@@ -251,7 +257,7 @@ var phraseSearch=function(tofind,opts) {
 		return [];
 	}
 	if (typeof tofind=='number') tofind=tofind.toString();
-	var postings=[];
+	var postings=[],ops=[];
 	var tokens=tokenize.apply(this,[tofind.trim()]);
 	var g=null,raw=null;
 	var tag=opts.tag||"";
@@ -265,12 +271,15 @@ var phraseSearch=function(tofind,opts) {
 	} else {
 		if (profile) console.time('get posting');
 		for (var i in tokens) {
-			var posting=loadtoken.apply(this,[tokens[i]])
-			if (posting) postings.push(posting);
+			var loaded=loadtoken.apply(this,[tokens[i]])
+			if (loaded.posting) {
+				postings.push(loaded.posting);
+				ops.push(loaded.op);
+			}
 		}
 		if (profile) console.timeEnd('get posting');
 		if (profile) console.time('phrase merge')
-		if (!raw) raw=plist.plphrase(postings);
+		if (!raw) raw=plist.plphrase(postings,ops);
 		if (profile) console.timeEnd('phrase merge')
 		if (profile) console.time('group block');
 		
