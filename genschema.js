@@ -51,7 +51,7 @@ Genschema=function() {
 				sparseval:opts.sparseval, 
 				prefix:opts.prefix,
 				range:opts.range,
-				allowempty:opts.allowempty,
+				allowempty:opts.allowempty || opts.sparseval,
 				depth:opts.depth};
 			}
 			this.schema[tags[i]].indexattributes=JSON.parse(JSON.stringify(I));
