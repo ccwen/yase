@@ -1,6 +1,6 @@
 ﻿var fs=require('fs');
 var yase=require('./yase');
-var search=require('./search');
+//var search=require('./search');
 
 var phraseSearch=function(opts) {
 	var se=yase(opts.db);
@@ -57,6 +57,7 @@ var expandToken=function(opts) {
 	var res=se.expandToken(opts.token,opts);
 	return res;
 }
+/*
 var fuzzysearch=function(opts) {
 	var se=yase(opts.db);
 	se.phrasecache=se.phrasecache||{};
@@ -65,7 +66,7 @@ var fuzzysearch=function(opts) {
 	//console.log(JSON.stringify(res));
 	return res;
 }
-
+*/
 var findTagBySelectors=function(opts) {
 	var start=0, o={}, out=[];
 	for (var i in opts.selectors) {

@@ -4,7 +4,7 @@
 var Yasew=require('./yasew1');
 var Schema=require('./schema');
 var fs=require('fs');
-var wrench=require('./wrench');
+//var wrench=require('./wrench');
 var getfiles=function( filelist , maxfile) {
 	var files=fs.readFileSync(filelist,'utf8').replace(/\r\n/g,'\n').split('\n');
 	var output=[];
