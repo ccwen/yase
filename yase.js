@@ -330,6 +330,7 @@ var phraseSearch=function(tofind,opts) {
 	if (opts.grouped) return g;
 	if (profile) console.time('highlight')
 	var R="";
+	opts.showtext=opts.showtext || opts.highlight;
 	if (opts.showtext) {
 		R=highlightresult.apply(this,[g,tokens.length,!opts.highlight]);
 	}

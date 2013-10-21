@@ -122,18 +122,6 @@ var getTextRange=function(opts) {
 	var res=se.getTextRange(opts.start,opts.end,opts);
 	return res;
 }
-var enumydb=function() {
-	var output={};
-	var dbnames=[];
-	for (var i in ydbfiles) {
-		var fullname=ydbfiles[i];
-		fullname=fullname.replace('/',':').replace('.ydb','');
-		var dbname=fullname.match(/.*:(.*)/)[1]
-		console.log(dbname)
-		output [ fullname] ='\0'; //pretend to be loaded
-	}
-	return output;
-}
 var keyExists=function(path) { //path including database name
 	var dbname=path.shift();
 	dbname=dbname.replace(':','/');
@@ -143,7 +131,7 @@ var keyExists=function(path) { //path including database name
 var getRaw=function(path) { //path including database name
 	var res=null;
 	if (!path || path.length==0) {
-		var res=enumydb();
+		var res=JSON.parse(JSON.stringify(require('yadb').api().getRaw([],{loadmeta:true})));
 	} else {
 		var dbname=path.shift();
 		dbname=dbname.replace(':','/');
