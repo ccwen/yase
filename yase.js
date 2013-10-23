@@ -218,7 +218,7 @@ var loadtoken=function(token) {
 		token=token.substring(0,token.length-1);
 	}
 	if (lastchar=='^') { //do not expand if ends with ^
-		return this.getPostingById(token);
+		return {posting:this.getPostingById(token),op:op};
 	}
 	if (lastchar=='!') {
 		op='andnot';
