@@ -29,6 +29,7 @@ var getText=function(seq,opts) {
 		for (var i in seq) {
 			var batch=Math.floor(seq[i] / slotperbatch);
 			var t=this.get(['texts',batch, seq[i] % slotperbatch]);
+			if (typeof t=='undefined') break;
 			r.push(t);
 		}
 		return r;

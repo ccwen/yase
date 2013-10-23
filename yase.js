@@ -151,6 +151,7 @@ var highlighttexts=function(seqarr,tofind) {
 			var seq=seqarr[i];
 			var hits=R[seq];
 			var t=this.getText(seq);
+			if (typeof t=='undefined') break;
 			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,phraselength:phraselength};
 			if (hits) out+= highlight.apply(this, [ hopts]);
 			else out+=t;
@@ -585,7 +586,9 @@ var getTextRange=function(start,end,opts) {
 		end=this.findTag(o.tag,o.attribute,o.value).slot;
 	} else end=parseInt(end);
 	var slots=[];
-	for (var i=start;i<end;i++) slots.push(i);
+	for (var i=start;i<end;i++) {
+		slots.push(i);
+	}
 	//console.log('fetching',start,end)
 	return this.getText(slots,opts);
 }
