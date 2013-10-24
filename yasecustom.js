@@ -5,7 +5,7 @@ var version=function() { return 0x20130808};
 
 var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
-	return  ( c==0xf0d || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
+	return  ( c==0xf0d ||c==0xf0e || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
 }
 var isSpaceChar=function(c) {
 	return ((c.charCodeAt(0)>=0x2000 && c.charCodeAt(0)<=0x206f) 
@@ -13,7 +13,7 @@ var isSpaceChar=function(c) {
 		|| c=='|' || c=='~' || c=='`' || c==';' || c=='.' || c==','
 		|| c=='>' || c==':' || c=='}'
 		|| c=='=' || c=='@' || c==']' || c==')' || c=='!'
-		|| c=="་" || c=="།");
+		|| c=="་" || c=="།" || c=="༎");
 }
 var isCJK =function(c) {return ((c>=0x3000 && c<=0x9FFF) 
 	|| (c>=0xD800 && c<0xDFFF) || (c>=0x2FF0 && c<0x2FFF) || (c>=0xFF00) ) ;}
