@@ -1,6 +1,7 @@
 ﻿var vows = require('vows'),
     assert = require('assert'),
-    Yase=require('../yase');
+    Yase=require('../yase'),
+    Search=require('../search');
 var fs=require('fs')
 vows.describe('yadm 4 test suite').addBatch({
     'texts': {
