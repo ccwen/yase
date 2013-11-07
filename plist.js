@@ -180,6 +180,19 @@ var combine=function (postings) {
   out.sort(function(a,b){return a-b});
   return out;
 }
+
+var unique = function(ar){
+   var u = {}, a = [];
+   for(var i = 0, l = ar.length; i < l; ++i){
+    if(u.hasOwnProperty(ar[i])) continue;
+    a.push(ar[i]);
+    u[ar[i]] = 1;
+   }
+   return a;
+}
+
+
+
 var plphrase = function (postings,ops) {
 	
   var r = [];

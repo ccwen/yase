@@ -83,93 +83,6 @@ var expandKeys=function(fullpath,path,opts) {
 	return out;
 }
 
-var highlight=function(opts) {
-	var tokens=opts.tokenize.apply(this,[opts.text]);
-	var i=0,j=0,last=0,voff=0,now=0;
-	var output='';
-	
-	while (i<tokens.length) {
-		if (voff==opts.hits[j]) {
-			while (last<i) output+= tokens[last++];
-			while (tokens[i][0]=='<') output+= tokens[i++];
-			output+= '<hl>';
-			var len=opts.phraselength;
-			while (len) {
-				output+=tokens[i++];len--;
-				if (i>=tokens.length) break;
-				if (tokens[i][0]!='<') voff++;				
-			}
-			output+='</hl>';
-			last=i;
-			j++;
-		}
-		if (tokens[i] && tokens[i][0]!='<') voff++;
-		i++;
-	}
-	while (last<tokens.length) output+= tokens[last++];
-	return output;
-}
-//return highlighted texts given a raw hits
-var highlighttexts=function(seqarr,tofind) {
-	var R=this.phraseSearch(tofind,{grouped:true});
-
-	var tokens=this.customfunc.tokenize.apply(this,[tofind]);
-	var phraselength=tokens.length;
-
-	if (typeof seqarr=='number' || typeof seqarr=='string') {
-		var t=this.getText(parseInt(seqarr));
-		if (R[seqarr]) return highlight({ text: t , hits: R[seqarr]} );
-		else return t;
-	} else {
-		var out="";
-		for (var i in seqarr) { //TODO : fix overflow slot
-			var seq=seqarr[i];
-			var hits=R[seq];
-			var t=this.getText(seq);
-			if (typeof t=='undefined') break;
-			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,phraselength:phraselength};
-			if (hits) out+= highlight.apply(this, [ hopts]);
-			else out+=t;
-		}
-		return out;
-	}
-}
-var highlightresult=function(R,phraselength,nohighlight) {
-	var rescount=0;
-	var slotsize = 2 << (this.meta.slotshift -1);	
-	//console.log('highlightresult',R)
-	var lasti='', hits=[],addition=0;
-	var output={};
-	/* TODO , same sentence in multiple slot render once */
-	for (var i in R) {
-		var nslot=parseInt(i);
-		var text=this.getText(nslot);
-		var hits=R[i];
-		addition=0;
-
-		while (!text && nslot) {
-			nslot--;
-			text=this.getText(nslot);
-			addition+=slotsize;
-		}
-	
-		if (addition) hits=hits.map( function(j) {return addition+j});
-
-		if (nohighlight) {
-			var h=text;
-		} else {
-			var h=highlight.apply(this,[{
-				tokenize:this.customfunc.tokenize,
-				hits:hits,
-				text:text,
-				phraselength:phraselength
-			}]);
-
-		}
-		output[nslot]=h;
-	}
-	return output;
-}
 //need optimized, use array slice
 var trimbyrange=function(g, start,end) {
 	var out={};
@@ -195,7 +108,7 @@ var getKeys=function(id) {
 var getText=function(slot,opts) {
 	if (opts && opts.tofind) {
 	 	//console.log('text with tofind',opts.tofind);
-		t=highlighttexts.apply(this, [slot,opts.tofind]);
+		t=Search.highlighttexts.apply(this, [slot,opts.tofind]);
 	} else {
 	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
 	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
@@ -523,7 +436,7 @@ var yase_use = function(fn,opts) {
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
 		instance.phraseSearch=Search.phraseSearch;
-		instance.search=Search.search;
+		instance.boolSearch=Search.boolSearch;
 		instance.getPostingById=getPostingById;
 		instance.closestTag=closestTag;
 		instance.sourceInfo=sourceInfo;

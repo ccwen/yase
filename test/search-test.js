@@ -10,15 +10,47 @@ vows.describe('yase searchtest suite').addBatch({
         	var db=new Yase('./searchdb.ydb')
         	return db;
 	},
-	search:function(topic) {
+	followby:function(topic) {
 		var command=[
-			"a2",
+			"a1",
 			"b2",
 			Search['FOLLOWBY']
 		]
-		var r=topic.search(command);
-		console.log(r);
+		var r=topic.boolSearch(command);
+		assert.deepEqual( r[0] , [0,1,33,34]);
+		assert.deepEqual( r[1] , [0,0,1,1]);
 	},
+	notfollowby:function(topic) {
+		var command=[
+			"a1",
+			"b2",
+			Search['NOTFOLLOWBY']
+		]
+		var r=topic.boolSearch(command);
+		assert.deepEqual( r[0] , [128]);
+		assert.deepEqual( r[1] , [0]);
+
+		var command=[
+			"a1",
+			"d2",
+			Search['NOTFOLLOWBY']
+		]
+
+		var r=topic.boolSearch(command);
+		assert.deepEqual( r[0] , [0,1,97,128]);
+		assert.deepEqual( r[1] , [0,0,1,0]);
+
+	},
+
+	or:function(topic){
+		var command=[
+			"a1","a2",Search['OR']
+		]
+		var r=topic.boolSearch(command);
+		assert.deepEqual( r[0] , [0,1,2,128,129]);
+		assert.deepEqual( r[1] , [0,0,1,0  ,1]);
 	}
+
+}
 
 }).export(module); // Export the Suite
