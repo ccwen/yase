@@ -75,34 +75,38 @@ var highlight=function(opts) {
 	var tokens=opts.tokenize.apply(this,[opts.text]);
 	var i=0,j=0,last=0,voff=0,now=0;
 	var output='';
-	
+
+	while (tokens[i][0]=='<') output+=tokens[i++];
+
 	while (i<tokens.length) {
 		if (voff==opts.hits[j]) {
-			while (last<i) output+= tokens[last++];
-			while (tokens[i][0]=='<') output+= tokens[i++];
-			output+= '<hl>';
-			var len=opts.phraselength;
+			var ntoken=opts.ntokens[j];
+			var len=opts.tokenlengths[ntoken];
+			output+= '<hl n="'+ntoken+'">';
 			while (len) {
-				output+=tokens[i++];len--;
+				output+=tokens[i];len--;
 				if (i>=tokens.length) break;
-				if (tokens[i][0]!='<') voff++;				
+				if (tokens[i][0]!='<') voff++;
+				i++;
 			}
 			output+='</hl>';
-			last=i;
 			j++;
+		} else {
+			output+=tokens[i];
+			if (tokens[i][0]!='<') voff++;
+			i++;
 		}
-		if (tokens[i] && tokens[i][0]!='<') voff++;
-		i++;
 	}
-	while (last<tokens.length) output+= tokens[last++];
+	while (i<tokens.length) output+= tokens[i++];
 	return output;
 }
 //return highlighted texts given a raw hits
 var highlighttexts=function(seqarr,tofind) {
+
 	var R=this.phraseSearch(tofind,{grouped:true});
 
 	var tokens=this.customfunc.tokenize.apply(this,[tofind]);
-	var phraselength=tokens.length;
+	var tokenlengths=[tokens.length];
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
 		var t=this.getText(parseInt(seqarr));
@@ -115,7 +119,7 @@ var highlighttexts=function(seqarr,tofind) {
 			var hits=R[seq];
 			var t=this.getText(seq);
 			if (typeof t=='undefined') break;
-			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,phraselength:phraselength};
+			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,tokenlengths:tokenlengths};
 			if (hits) out+= highlight.apply(this, [ hopts]);
 			else out+=t;
 		}
@@ -123,7 +127,7 @@ var highlighttexts=function(seqarr,tofind) {
 	}
 }
 
-var highlightresult=function(R,phraselength,nohighlight) {
+var highlightresult=function(R,ntokens,tokenlengths,nohighlight) {
 	var rescount=0;
 	var slotsize = 2 << (this.meta.slotshift -1);	
 	//console.log('highlightresult',R)
@@ -135,7 +139,6 @@ var highlightresult=function(R,phraselength,nohighlight) {
 		var text=this.getText(nslot);
 		var hits=R[i];
 		addition=0;
-
 		while (!text && nslot) {
 			nslot--;
 			text=this.getText(nslot);
@@ -150,14 +153,74 @@ var highlightresult=function(R,phraselength,nohighlight) {
 			var h=highlight.apply(this,[{
 				tokenize:this.customfunc.tokenize,
 				hits:hits,
+				ntokens:ntokens[i],
 				text:text,
-				phraselength:phraselength
+				tokenlengths:tokenlengths
 			}]);
 
 		}
 		output[nslot]=h;
 	}
 	return output;
+}
+var renderhits=function(g,ntokens,opts) {
+
+	if (!opts.showtext && !opts.highlight) return [g,ntokens];
+	
+	//trim by range
+	if (opts.rangestart || ( typeof opts.rangeend !='undefined' && opts.rangend!=-1) ) {
+		g=trimbyrange.apply(this,[g,opts.rangestart,opts.rangeend]);
+	}
+
+	if (opts.countonly) {
+		return {count:Object.keys(g).length, hitcount: raw.length};
+	}
+
+	//trim output
+	if (opts.start!=undefined) {
+		opts.maxcount=opts.maxcount||10;
+		var o={};
+		var count=0,start=opts.start;
+		for (var i in g) {
+			if (start==0) {
+				if (count>=opts.maxcount) break;
+				o[i]=g[i];
+				count++;
+			} else {
+				start--;
+			}
+		}
+		g=o;
+	}
+
+	if (opts.grouped) return g;
+	if (profile) console.time('highlight')
+	var R="";
+	opts.showtext=opts.showtext || opts.highlight;
+
+	if (opts.showtext) {
+		R=highlightresult.apply(this,[g,ntokens,opts.tokenlengths,!opts.highlight]);
+	}
+	if (profile) console.timeEnd('highlight');
+	if (opts.array || opts.closesttag || opts.sourceinfo ) {
+		var out=[];
+		var seq=opts.start || 0;
+		for (var i in R) {
+			i=parseInt(i);
+			var obj={seq:seq,slot:i,text:R[i]};
+			if (opts.closesttag) {
+				obj.closest=this.closestTag.apply(this,[opts.closesttag,i]);
+			}
+			if (opts.sourceinfo) {
+				obj.sourceinfo=this.sourceInfo.apply(this,[i]);
+			}
+			seq++;
+			out.push(obj);
+		}
+		return out;
+	} else {
+		return R;	
+	}
 }
 var phraseSearch=function(tofind,opts) {
 	var tokenize=this.customfunc.tokenize;
@@ -169,6 +232,7 @@ var phraseSearch=function(tofind,opts) {
 	if (typeof tofind=='number') tofind=tofind.toString();
 	var postings=[],ops=[];
 	var tokens=tokenize.apply(this,[tofind.trim()]);
+	opts.tokenlengths=[tokens.length];
 	var g=null,raw=null;
 	var tag=opts.tag||"";
 	opts.array =true; //default output format
@@ -211,65 +275,14 @@ var phraseSearch=function(tofind,opts) {
 		if (opts.rawcountonly) return raw.count;
 		g=plist.groupbyblock(raw, this.meta.slotshift);
 	}
-	//trim by range
-	if (opts.rangestart || ( typeof opts.rangeend !='undefined' && opts.rangend!=-1) ) {
-		g=trimbyrange.apply(this,[g,opts.rangestart,opts.rangeend]);
-	}
 
-	if (opts.countonly) {
-		return {count:Object.keys(g).length, hitcount: raw.length};
-	}
-
-	//trim output
-	if (opts.start!=undefined) {
-		opts.maxcount=opts.maxcount||10;
-		var o={};
-		var count=0,start=opts.start;
-		for (var i in g) {
-			if (start==0) {
-				if (count>=opts.maxcount) break;
-				o[i]=g[i];
-				count++;
-			} else {
-				start--;
-			}
-		}
-		g=o;
-	}
-	
-	if (opts.grouped) return g;
-	if (profile) console.time('highlight')
-	var R="";
-	opts.showtext=opts.showtext || opts.highlight;
-	if (opts.showtext) {
-		R=highlightresult.apply(this,[g,tokens.length,!opts.highlight]);
-	}
-	if (profile) console.timeEnd('highlight');
-	if (opts.array || opts.closesttag || opts.sourceinfo ) {
-		var out=[];
-		var seq=opts.start || 0;
-		for (var i in R) {
-			i=parseInt(i);
-			var obj={seq:seq,slot:i,text:R[i]};
-			if (opts.closesttag) {
-				obj.closest=this.closestTag.apply(this,[opts.closesttag,i]);
-			}
-			if (opts.sourceinfo) {
-				obj.sourceinfo=this.sourceInfo.apply(this,[i]);
-			}
-			seq++;
-			out.push(obj);
-		}
-		return out;
-	} else {
-		return R;	
-	}
-	
+	return renderhits.apply(this,[g,[0],opts]);
 }
 
 var boolSearch=function(operations,opts) {
 	var stack=[];
 	opts=opts||{};
+	var tokenlengths=[];
 	opts.distance=opts.distance||2;
     opts.groupsize = Math.pow(2,this.meta.slotshift);
     var n=0;
@@ -283,10 +296,19 @@ var boolSearch=function(operations,opts) {
 			var ntoken=[];
 			for (var j=0;j<r.length;j++) ntoken[j]=n;
 			stack.push([r, ntoken]);
+
+			var tokens=this.customfunc.tokenize.apply(this,[operations[i].trim()]);
+			tokenlengths[n]=tokens.length;
 			n++;
 		}
 	}
-	return stack.pop();
+	var r=stack.pop();
+
+	if (opts.grouped || opts.highlight) {
+		r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
+	}
+	opts.tokenlengths=tokenlengths;
+	return renderhits.apply(this,[r[0],r[1],opts]);
 }
 
 var nearby=function(op1,op2,opts) {

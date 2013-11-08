@@ -58,6 +58,28 @@ var groupbyposting = function (arr, posting) {
   out[posting.length] = arr.length-i; //remaining
   return out;
 }
+var groupbyblock2 = function(ar, ntoken,slotshift,opts) {
+  if (!ar.length) return [{},{}];
+  
+  slotshift = slotshift || 16;
+  var g = Math.pow(2,slotshift);
+  var i = 0;
+  var r = {}, ntokens={};
+  var groupcount=0;
+  do {
+    var group = Math.floor(ar[i] / g) ;
+    if (!r[group]) {
+      r[group] = [];
+      ntokens[group]=[];
+      groupcount++;
+    }
+    r[group].push(ar[i] % g);
+    ntokens[group].push(ntoken[i]);
+    i++;
+  } while (i < ar.length);
+  if (opts) opts.groupcount=groupcount;
+  return [r,ntokens];
+}
 var groupbyblock = function (ar, slotshift, opts) {
   if (!ar.length)
 	return {};
@@ -219,6 +241,7 @@ plist.plphrase=plphrase;
 plist.plhead=plhead;
 
 plist.groupbyblock=groupbyblock;
+plist.groupbyblock2=groupbyblock2;
 plist.groupbyposting=groupbyposting;
 plist.groupsum=groupsum;
 plist.combine=combine;

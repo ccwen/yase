@@ -19,6 +19,14 @@ vows.describe('yase searchtest suite').addBatch({
 		var r=topic.boolSearch(command);
 		assert.deepEqual( r[0] , [0,1,33,34]);
 		assert.deepEqual( r[1] , [0,0,1,1]);
+
+		var r=topic.boolSearch(command,{grouped:true});
+		assert.deepEqual( r[0], {0:[0,1], 1:[1,2]} );
+		assert.deepEqual( r[1], {0:[0,0], 1:[1,1]} );
+		
+		var r=topic.boolSearch(command,{highlight:true});
+		console.log(r)
+		
 	},
 	notfollowby:function(topic) {
 		var command=[
@@ -49,8 +57,7 @@ vows.describe('yase searchtest suite').addBatch({
 		var r=topic.boolSearch(command);
 		assert.deepEqual( r[0] , [0,1,2,128,129]);
 		assert.deepEqual( r[1] , [0,0,1,0  ,1]);
-	}
-
+	},
 }
 
 }).export(module); // Export the Suite
