@@ -172,7 +172,7 @@ var highlighttexts=function(seqarr,tofind) {
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
 		var t=this.getText(parseInt(seqarr));
-		if (R[seqarr]) return highlight({ text: t , hits: R[seqarr]} );
+		if (R[seqarr]) return highlight({ text: t , hits: R[seqarr] , ntokens:[0]} );
 		else return t;
 	} else {
 		var out="";
@@ -181,7 +181,7 @@ var highlighttexts=function(seqarr,tofind) {
 			var hits=R[seq];
 			var t=this.getText(seq);
 			if (typeof t=='undefined') break;
-			var hopts={ text: t , hits: hits, tokenize:this.customfunc.tokenize,tokenlengths:tokenlengths};
+			var hopts={ text: t , hits: hits, ntokens:[0], tokenize:this.customfunc.tokenize,tokenlengths:tokenlengths};
 			if (hits) out+= highlight.apply(this, [ hopts]);
 			else out+=t;
 		}
@@ -356,38 +356,6 @@ var phraseSearch=function(tofind,opts) {
 	return renderhits.apply(this,[g,[0],opts]);
 }
 
-var boolSearch=function(operations,opts) {
-	var stack=[];
-	opts=opts||{};
-	var tokenlengths=[];
-	opts.distance=opts.distance||2;
-    opts.groupsize = Math.pow(2,this.meta.slotshift);
-    var n=0;
-
-	for (var i=0;i<operations.length;i++) {
-		if (typeof operations[i]=='function') {
-			var op2=stack.pop(),op1=stack.pop();
-			stack.push( operations[i].apply(this,[op1,op2,opts]));
-		} else {
-			var r=this.phraseSearch(operations[i],{raw:true});
-			var ntoken=[];
-			for (var j=0;j<r.length;j++) ntoken[j]=n;
-			stack.push([r, ntoken]);
-
-			var tokens=this.customfunc.tokenize.apply(this,[operations[i].trim()]);
-			tokenlengths[n]=tokens.length;
-			n++;
-		}
-	}
-	var r=stack.pop();
-	opts.raw=r[0];
-	if (opts.grouped || opts.highlight) {
-		r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
-	}
-	opts.tokenlengths=tokenlengths;
-
-	return renderhits.apply(this,[r[0],r[1],opts]);
-}
 
 var nearby=function(op1,op2,opts) {
 
@@ -473,6 +441,59 @@ var notfollowby=function(op1,op2,opts) {
 	}
 	return [res,ntoken];
 }
+
+var OPERATIONS={
+	nearby:nearby,
+	notnearby:notnearby,
+	followby:followby,
+	notfollowby:notfollowby,	
+}
+
+var boolSearch=function(operations,opts) {
+	var stack=[];
+	opts=opts||{};
+	var tokenlengths=[];
+	opts.distance=opts.distance||2;
+    opts.groupsize = Math.pow(2,this.meta.slotshift);
+    var n=0;
+
+	for (var i=0;i<operations.length;i++) {
+		if (typeof operations[i]=='string') {
+			var op=OPERATIONS[operations[i]];
+			if (stack.length>=2) {
+				var op2=stack.pop(),op1=stack.pop();
+				stack.push( op.apply(this,[op1,op2,opts]));
+			}
+		} else {
+
+			for (var j=0;j<operations[i].length;j++) {
+				var r=this.phraseSearch(operations[i][j],{raw:true});
+				var ntoken=[];
+				for (var k=0;k<r.length;k++) ntoken[k]=n;
+				stack.push([r, ntoken]);
+
+				var tokens=this.customfunc.tokenize.apply(this,[operations[i][j].trim()]);
+				tokenlengths[n]=tokens.length;
+				n++;
+			}
+
+			for (var j=0;j<operations[i].length-1;j++) {
+				var op2=stack.pop(),op1=stack.pop();
+				stack.push( or.apply(this,[op1,op2,opts] ) );
+			}
+
+		}
+	}
+	var r=stack.pop();
+	opts.raw=r[0];
+	if (opts.grouped || opts.highlight) {
+		r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
+	}
+	opts.tokenlengths=tokenlengths;
+
+	return renderhits.apply(this,[r[0],r[1],opts]);
+}
+
 /* combine two postings with ntoken */
 var or=function(op1,op2,opts) {
 	var r=[];
@@ -483,12 +504,12 @@ var or=function(op1,op2,opts) {
 	ntoken=r.map(function(a){return a[1]} )
 	return [res,ntoken];
 }
+
 module.exports={
-	NEARBY:nearby,
-	NOTNEARBY:notnearby,
-	FOLLOWBY:followby,
-	NOTFOLLOWBY:notfollowby,
-	OR:or,
+	nearby:nearby,
+	notnearby:notnearby,
+	followby:followby,
+	notfollowby:notfollowby,
 	boolSearch:boolSearch,
 	phraseSearch:phraseSearch,
 	expandToken:expandToken,

@@ -12,9 +12,9 @@ vows.describe('yase searchtest suite').addBatch({
 	},
 	followby:function(topic) {
 		var command=[
-			"a1",
-			"b2",
-			Search['FOLLOWBY']
+			["a1"],
+			["b2"],
+			'followby'
 		]
 		var r=topic.boolSearch(command);
 		assert.deepEqual( r[0] , [0,1,33,34]);
@@ -30,18 +30,18 @@ vows.describe('yase searchtest suite').addBatch({
 	},
 	notfollowby:function(topic) {
 		var command=[
-			"a1",
-			"b2",
-			Search['NOTFOLLOWBY']
+			["a1"],
+			["b2"],
+			'notfollowby'
 		]
 		var r=topic.boolSearch(command);
 		assert.deepEqual( r[0] , [128]);
 		assert.deepEqual( r[1] , [0]);
 
 		var command=[
-			"a1",
-			"d2",
-			Search['NOTFOLLOWBY']
+			["a1"],
+			["d2"],
+			'notfollowby'
 		]
 
 		var r=topic.boolSearch(command);
@@ -52,7 +52,7 @@ vows.describe('yase searchtest suite').addBatch({
 
 	or:function(topic){
 		var command=[
-			"a1","a2",Search['OR']
+			["a1","a2"]
 		]
 		var r=topic.boolSearch(command);
 		assert.deepEqual( r[0] , [0,1,2,128,129]);
