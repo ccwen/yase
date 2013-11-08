@@ -1,5 +1,67 @@
 var plist=require('./plist.js');
+var expandKeys=function(fullpath,path,opts) {
+	var out=[];
+	path=JSON.parse(JSON.stringify(path))
+	path.unshift('postings')
+	var out1=this.keys(path);
+	path.shift();
 
+	var prefix=" ";
+	if (path.length<fullpath.length) {
+		prefix=fullpath[path.length];
+	} else {
+		prefix="" ;//final
+	}
+	out1=out1.sort(function(a,b){
+		if (a<b) return -1;
+		else if (a>b) return 1;
+		else return 0;
+	});
+	
+	for (var i in out1) {
+		var lead=out1[i];
+		var sim=lead;
+
+		if (path[path.length-1] && prefix!=" ") {
+			lead=lead.substring(0, prefix.length);
+		}
+
+		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
+		if (this.customfunc.simplifiedToken) {
+			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
+			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
+		}
+		
+		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
+			//console.log('hit',out1[i])
+
+			var start=0;
+			if (path[path.length-1] && prefix!=" ") start=prefix.length;
+
+			//if (out1[i]==" ") out.push(path.join(""));
+			if (path.length<fullpath.length-1 && out1[i]!=" ") {
+
+				if (opts.exact && out1[i]!=fullpath[path.length] &&
+						sim!=fullpath[path.length]) continue;
+				
+				path.push(out1[i]);
+				out=out.concat(expandKeys.apply(this,[fullpath,path,opts]));	
+				path.pop();
+			} else {
+				if (opts.exact) {
+					if (out1[i]==fullpath[path.length] || 
+						sim==fullpath[path.length]) {
+						out.push(path.join("")+out1[i].trim());		
+					}
+				} else {
+					out.push(path.join("")+out1[i].trim());	
+				}
+			}
+			if (out.length>=opts.max) break;
+		}
+	}
+	return out;
+}
 var expandToken=function(token,opts) {
 	//see test/yase-test.js for spec
 	if (!this.customfunc.simplifiedToken) return false;
@@ -81,7 +143,7 @@ var highlight=function(opts) {
 	while (i<tokens.length) {
 		if (voff==opts.hits[j]) {
 			var ntoken=opts.ntokens[j];
-			var len=opts.tokenlengths[ntoken];
+			var len=opts.tokenlengths[ntoken] || opts.tokenlengths[0];
 			output+= '<hl n="'+ntoken+'">';
 			while (len) {
 				output+=tokens[i];len--;
@@ -153,7 +215,7 @@ var highlightresult=function(R,ntokens,tokenlengths,nohighlight) {
 			var h=highlight.apply(this,[{
 				tokenize:this.customfunc.tokenize,
 				hits:hits,
-				ntokens:ntokens[i],
+				ntokens:ntokens[i] || [0],
 				text:text,
 				tokenlengths:tokenlengths
 			}]);
@@ -163,7 +225,24 @@ var highlightresult=function(R,ntokens,tokenlengths,nohighlight) {
 	}
 	return output;
 }
+//need optimized, use array slice
+var trimbyrange=function(g, start,end) {
+	var out={};
+	start=start||0;
+	if (end==-1) end=this.meta.slotcount+1;
+	for (var i in g) {
+		i=parseInt(i);
+		if (i>=start && i<end)  {
+			out[i]=g[i];
+		}
+	}
+	return out;
+}
+
 var renderhits=function(g,ntokens,opts) {
+	if (opts.countonly) {
+		return {count:Object.keys(g).length, hitcount: opts.raw.length};
+	}
 
 	if (!opts.showtext && !opts.highlight) return [g,ntokens];
 	
@@ -172,9 +251,7 @@ var renderhits=function(g,ntokens,opts) {
 		g=trimbyrange.apply(this,[g,opts.rangestart,opts.rangeend]);
 	}
 
-	if (opts.countonly) {
-		return {count:Object.keys(g).length, hitcount: raw.length};
-	}
+
 
 	//trim output
 	if (opts.start!=undefined) {
@@ -275,7 +352,7 @@ var phraseSearch=function(tofind,opts) {
 		if (opts.rawcountonly) return raw.count;
 		g=plist.groupbyblock(raw, this.meta.slotshift);
 	}
-
+	opts.raw=raw;
 	return renderhits.apply(this,[g,[0],opts]);
 }
 
@@ -303,11 +380,12 @@ var boolSearch=function(operations,opts) {
 		}
 	}
 	var r=stack.pop();
-
+	opts.raw=r[0];
 	if (opts.grouped || opts.highlight) {
 		r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
 	}
 	opts.tokenlengths=tokenlengths;
+
 	return renderhits.apply(this,[r[0],r[1],opts]);
 }
 

@@ -19,83 +19,8 @@ var getPostingById=function(id) {
 	var r=this.get(idarr,true);
 	return r;
 }
-var expandKeys=function(fullpath,path,opts) {
-	var out=[];
-	path=JSON.parse(JSON.stringify(path))
-	path.unshift('postings')
-	var out1=this.keys(path);
-	path.shift();
 
-	var prefix=" ";
-	if (path.length<fullpath.length) {
-		prefix=fullpath[path.length];
-	} else {
-		prefix="" ;//final
-	}
-	out1=out1.sort(function(a,b){
-		if (a<b) return -1;
-		else if (a>b) return 1;
-		else return 0;
-	});
-	
-	for (var i in out1) {
-		var lead=out1[i];
-		var sim=lead;
 
-		if (path[path.length-1] && prefix!=" ") {
-			lead=lead.substring(0, prefix.length);
-		}
-
-		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
-		if (this.customfunc.simplifiedToken) {
-			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
-			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
-		}
-		
-		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
-			//console.log('hit',out1[i])
-
-			var start=0;
-			if (path[path.length-1] && prefix!=" ") start=prefix.length;
-
-			//if (out1[i]==" ") out.push(path.join(""));
-			if (path.length<fullpath.length-1 && out1[i]!=" ") {
-
-				if (opts.exact && out1[i]!=fullpath[path.length] &&
-						sim!=fullpath[path.length]) continue;
-				
-				path.push(out1[i]);
-				out=out.concat(expandKeys.apply(this,[fullpath,path,opts]));	
-				path.pop();
-			} else {
-				if (opts.exact) {
-					if (out1[i]==fullpath[path.length] || 
-						sim==fullpath[path.length]) {
-						out.push(path.join("")+out1[i].trim());		
-					}
-				} else {
-					out.push(path.join("")+out1[i].trim());	
-				}
-			}
-			if (out.length>=opts.max) break;
-		}
-	}
-	return out;
-}
-
-//need optimized, use array slice
-var trimbyrange=function(g, start,end) {
-	var out={};
-	start=start||0;
-	if (end==-1) end=this.meta.slotcount+1;
-	for (var i in g) {
-		i=parseInt(i);
-		if (i>=start && i<end)  {
-			out[i]=g[i];
-		}
-	}
-	return out;
-}
 
 var getKeys=function(id) {
 	return this.getkeys(id);
