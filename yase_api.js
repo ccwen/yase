@@ -7,6 +7,17 @@ var phraseSearch=function(opts) {
 	var res=se.phraseSearch(opts.tofind,opts);
 	return res;
 };
+var boolSearch=function(opts) {
+	var se=yase(opts.db);
+	var res=se.boolSearch(opts.tofind,opts);
+	return res;
+};
+
+var search=function(opts) {
+	var se=yase(opts.db);
+	var res=se[opts.searchtype||'phraseSearch'](opts.tofind,opts);
+	return res;
+}
 var buildToc=function(opts) {
 	var se=yase(opts.db);
 	var res=se.buildToc(opts.toc,opts);
@@ -211,6 +222,8 @@ var installservice=function(services) { // so that it is possible to call other 
 	buildToc:buildToc,
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,
+	boolSearch:boolSearch,
+	search:search,
 	closestTag:closestTag,
 	findTag:findTag,
 	findTagBySelectors:findTagBySelectors,

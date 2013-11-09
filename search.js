@@ -356,7 +356,6 @@ var phraseSearch=function(tofind,opts) {
 	return renderhits.apply(this,[g,[0],opts]);
 }
 
-
 var nearby=function(op1,op2,opts) {
 
 }
