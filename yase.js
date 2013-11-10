@@ -33,7 +33,7 @@ var getKeys=function(id) {
 var getText=function(slot,opts) {
 	if (opts && opts.tofind) {
 	 	//console.log('text with tofind',opts.tofind);
-		t=Search.highlighttexts.apply(this, [slot,opts.tofind]);
+		t=Search.highlighttexts.apply(this, [slot,opts.tofind,opts]);
 	} else {
 	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
 	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
@@ -263,11 +263,11 @@ var getTextRange=function(start,end,opts) {
 var buildToc=function(toc,opts) {
 	var toctree=toc;
 	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
-
+	var searchtype=opts.searchtype||"phraseSearch";
 	if (!toctree) return null;
 	var res=[];
 	if (opts.tofind) {
-		res=this.phraseSearch(opts.tofind, {raw:true});
+		res=this[searchtype](opts.tofind, {raw:true});
 	}	
 	var T=this.genToc(toctree,opts);
 	var Tvpos=T.map(function(a) {return a[1]});

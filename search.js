@@ -50,8 +50,8 @@ var expandKeys=function(fullpath,path,opts) {
 			} else {
 				if (opts.exact) {
 					if (out1[i]==fullpath[path.length] || 
-						sim==fullpath[path.length]) {
-						out.push(path.join("")+out1[i].trim());		
+							sim==fullpath[path.length]) {
+							out.push(path.join("")+out1[i].trim());		
 					}
 				} else {
 					out.push(path.join("")+out1[i].trim());	
@@ -67,7 +67,7 @@ var expandToken=function(token,opts) {
 	if (!this.customfunc.simplifiedToken) return false;
 
 	opts=opts||{};
-	opts.max=opts.max||30;
+	opts.max=opts.max||100;
 	var count=0;
 	var out=[];
 	var tree=this.customfunc.token2tree(token);
@@ -146,9 +146,12 @@ var highlight=function(opts) {
 			var len=opts.tokenlengths[ntoken] || opts.tokenlengths[0];
 			output+= '<hl n="'+ntoken+'">';
 			while (len) {
-				output+=tokens[i];len--;
+				output+=tokens[i];
 				if (i>=tokens.length) break;
-				if (tokens[i][0]!='<') voff++;
+				if (tokens[i][0]!='<') {
+					voff++;
+					len--;
+				}
 				i++;
 			}
 			output+='</hl>';
@@ -163,26 +166,29 @@ var highlight=function(opts) {
 	return output;
 }
 //return highlighted texts given a raw hits
-var highlighttexts=function(seqarr,tofind) {
-
-	var R=this.phraseSearch(tofind,{grouped:true});
-
-	var tokens=this.customfunc.tokenize.apply(this,[tofind]);
-	var tokenlengths=[tokens.length];
+var highlighttexts=function(seqarr,tofind,opts) {
+	opts.searchtype=opts.searchtype||"phraseSearch";
+	var R=this[opts.searchtype](tofind,{all:true});
 
 	if (typeof seqarr=='number' || typeof seqarr=='string') {
 		var t=this.getText(parseInt(seqarr));
-		if (R[seqarr]) return highlight({ text: t , hits: R[seqarr] , ntokens:[0]} );
+		if (R.grouped[seqarr]) {
+			return highlight({ text: t , hits: R.grouped[seqarr] , ntokens:R.ntokens[seqarr],
+			tokenlengths:R.tokenlengths} );
+		}
 		else return t;
 	} else {
 		var out="";
 		for (var i in seqarr) { //TODO : fix overflow slot
 			var seq=seqarr[i];
-			var hits=R[seq];
+			var hits=R.grouped[seq];
 			var t=this.getText(seq);
 			if (typeof t=='undefined') break;
-			var hopts={ text: t , hits: hits, ntokens:[0], tokenize:this.customfunc.tokenize,tokenlengths:tokenlengths};
-			if (hits) out+= highlight.apply(this, [ hopts]);
+			if (hits) {
+				var hopts={ text: t , hits: hits, ntokens:R.ntokens[seq], 
+					tokenize:this.customfunc.tokenize,tokenlengths:R.tokenlengths};
+				out+= highlight.apply(this, [ hopts]);
+			}
 			else out+=t;
 		}
 		return out;
@@ -241,9 +247,10 @@ var trimbyrange=function(g, start,end) {
 
 var renderhits=function(g,ntokens,opts) {
 	if (opts.countonly) {
-		return {count:Object.keys(g).length, hitcount: opts.raw.length};
+		return {count:Object.keys(g).length, hitcount: opts.rawposting.length};
 	}
 
+	if (opts.all) return {grouped:g, ntokens:ntokens, tokenlengths:opts.tokenlengths};
 	if (!opts.showtext && !opts.highlight) return [g,ntokens];
 	
 	//trim by range
@@ -352,7 +359,7 @@ var phraseSearch=function(tofind,opts) {
 		if (opts.rawcountonly) return raw.count;
 		g=plist.groupbyblock(raw, this.meta.slotshift);
 	}
-	opts.raw=raw;
+	opts.rawposting=raw;
 	return renderhits.apply(this,[g,[0],opts]);
 }
 
@@ -363,6 +370,7 @@ var notnearby=function(op1,op2,opts) {
 	
 }
 /* must have op2 after op1 */
+/*TODO same token infinite loop*/
 var followby=function(op1,op2,opts) {
 	var res=[], ntoken=[];
 	var i=0,j=0;
@@ -376,21 +384,21 @@ var followby=function(op1,op2,opts) {
 
 		var g1=Math.floor(pl1[i] / opts.groupsize);
 		var d=g2-g1;
-		if (d>0 && d<opts.distance) {
+		if (d>=0 && d<=opts.distance) {
 			var d2=d;
-			while (d2>0 && d2<opts.distance) {
+			while (d2>=0 && d2<=opts.distance) {
 				res.push( pl1[i] )
 				ntoken.push( op1[1][i]);
 				i++;
 				d2=g2-Math.floor(pl1[i] / opts.groupsize);
 			}
-			while (d>0 && d<opts.distance) {
+			while (d>=0 && d<=opts.distance) {
 				res.push( pl2[j] );
 				ntoken.push( op2[1][j]);
 				j++;
 				d=Math.floor(pl2[j] / opts.groupsize)-g1;
 			}
-		}
+		} else i++;
 		if (j>=pl2.length) break;
 		while(i<pl1.length && pl1[i]<pl2[j]) i++;
 		if (i>=pl1.length) break;
@@ -405,26 +413,25 @@ var notfollowby=function(op1,op2,opts) {
 	var g2=Math.floor(pl2[0] / opts.groupsize);
 	while (i<pl1.length) {
 		while (j<pl2.length && pl2[j]<pl1[i]) {
-			res.push( pl2[j] )
-			ntoken.push( op2[1][j]);
-
+			//res.push( pl2[j] )
+			//ntoken.push( op2[1][j]);
 			j++;
 			g2=Math.floor(pl2[j] / opts.groupsize);
 		}
 
 		var g1=Math.floor(pl1[i] / opts.groupsize);
 		var d=g2-g1;
-		if (d>0 && d<opts.distance) {
+		if (d>=0 && d<=opts.distance) {
 			var d2=d;
-			while (d2>0 && d2<opts.distance) {
+			while (d2>=0 && d2<=opts.distance) {
 				i++;
 				d2=g2-Math.floor(pl1[i] / opts.groupsize);
 			}
-			while (d>0 && d<opts.distance) {
+			while (d>=0 && d<=opts.distance) {
 				j++;
 				d=Math.floor(pl2[j] / opts.groupsize)-g1;
 			}
-		}
+		} else i++;
 		if (j>=pl2.length) break;
 		while(i<pl1.length && pl1[i]<pl2[j]) {
 			res.push( pl1[i] )
@@ -452,7 +459,8 @@ var boolSearch=function(operations,opts) {
 	var stack=[];
 	opts=opts||{};
 	var tokenlengths=[];
-	opts.distance=opts.distance||2;
+	if (typeof opts.distance!='number') opts.distance=2;
+	
     opts.groupsize = Math.pow(2,this.meta.slotshift);
     var n=0;
 
@@ -484,12 +492,11 @@ var boolSearch=function(operations,opts) {
 		}
 	}
 	var r=stack.pop();
-	opts.raw=r[0];
-	if (opts.grouped || opts.highlight) {
-		r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
-	}
+	opts.rawposting=r[0];
+	if (opts.rawcountonly) return opts.rawposting.length;
+	if (opts.raw) return opts.rawposting;
+	r=plist.groupbyblock2( r[0],r[1],this.meta.slotshift);
 	opts.tokenlengths=tokenlengths;
-
 	return renderhits.apply(this,[r[0],r[1],opts]);
 }
 
