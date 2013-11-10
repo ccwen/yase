@@ -185,7 +185,7 @@ var highlighttexts=function(seqarr,tofind,opts) {
 			var t=this.getText(seq);
 			if (typeof t=='undefined') break;
 			if (hits) {
-				var hopts={ text: t , hits: hits, ntokens:R.ntokens[seq], 
+				var hopts={ text: t , hits: hits, ntokens:R.ntokens[seq]||R.ntokens, 
 					tokenize:this.customfunc.tokenize,tokenlengths:R.tokenlengths};
 				out+= highlight.apply(this, [ hopts]);
 			}
