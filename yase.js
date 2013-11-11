@@ -362,6 +362,7 @@ var yase_use = function(fn,opts) {
 		instance.getTextByTag=getTextByTag;
 		instance.phraseSearch=Search.phraseSearch;
 		instance.boolSearch=Search.boolSearch;
+		instance.renderhits=Search.renderhits;
 		instance.getPostingById=getPostingById;
 		instance.closestTag=closestTag;
 		instance.sourceInfo=sourceInfo;
