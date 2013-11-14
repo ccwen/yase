@@ -7,7 +7,7 @@ yadb for supporting full text search
 var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
 var selector=require('./selector');
-var Search=require('./search');
+var Search=require('./search1');
 
 var getPostingById=function(id) {
 	if (this.customfunc.token2tree) {
@@ -382,7 +382,8 @@ var yase_use = function(fn,opts) {
 	}
 
 	if (fn) {
-		db = require('yadb').api().open(fn,opts); // make use of yadb db pool 
+		var yadb=require('yadb').api();
+		db = yadb.open(fn,opts); // make use of yadb db pool 
 		if (!db) return null;
 		se_preload(db);
 	} else throw 'missing filename';

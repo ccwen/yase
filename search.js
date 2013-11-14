@@ -1,5 +1,106 @@
+/*
+  search rewrite
+
+
+  loadToken    
+     input  : token with suffix operator
+        rasa^  //for pali ,exact
+        rasa%  //auto expansion (up to 100 words with same prefix)
+
+     output : 
+        list of variants 
+        raw posting (OR all variants postings)
+
+     each token assign a color.
+
+  groupToken    
+     input  : raw posting, group unit (slot, p tag, document , etc)
+     output : 
+        [ [ngroup , postings from group starting voff] ] //array is much faster
+	    
+  Phrase Search  ( group by slot )
+    input : list of token (wild card, fix length , variable length)
+            token delimeter can be space, Tibetan Tsek
+            wild card served as token delimeter
+            ?12  //skip 12 token
+            *12  //within 12
+            A?B  //skip 1 token
+            A*B  // AB or A?B
+            A**B // AB or A?B or A??B
+            A2B // same as above
+            A*  // same as A
+            *A  // same as A
+            
+	find token in same group. (array intersect)
+
+ 	pland //only apply pland on possible group ==>save to cache
+
+ 	output: 
+ 	  {grouped: { ngroup:[array of postings] } , 
+ 	   tokenlengths: number | {ngroup:[array of phraselength]} }
+
+    grouped postings are keeped when need to check which nphrase at highlight stage
+    if phrase consist variable length wildcard, phraselength is an object of arrays.
+    otherwise phraselength is a number.
+
+  Boolean Search 
+    input: 
+       grouped postings of phrase search
+       Granularity: slot, sub-paragraph(p) , paragraph (p[n]), readunit
+
+    output: grouped postings of phrases
+ 	  {grouped: { ngroup:[array of postings] } , 
+ 	   tokenlengths: [array of phraselength] | {ngroup:[array of phraselength]} 
+ 	   nphrase: {ngroup:[array of phrase seq]}  }
+
+  Fuzzy Search (sentence similarity match)
+    input:
+      array of phrase ( no operator)
+      Granularity: slot, sub-paragraph(p) , paragraph (p[n]), readunit
+    output: ranked by relevancy
+    plugin for calculate of similarity
+    
+    Document length : groupsize in number of token can be retrieved by grouped posting
+          groupsize n = g[n+1]-g[n]
+
+
+
+  trim (starting and ending voff), for highlight page
+
+  seqcount // must know the total count first
+           //for incremental result listing
+
+  highlight //normally trimmed
+    input: grouped nphrase , grouped tokenlength, nphrase
+
+*/
+
+/*
+http://jsfiddle.net/neoswf/aXzWw/
+function intersect_safe(a, b)
+{
+  var ai = bi= 0;
+  var result = [];
+
+  while( ai < a.length && bi < b.length ){
+     if      (a[ai] < b[bi] ){ ai++; }
+     else if (a[ai] > b[bi] ){ bi++; }
+     else
+     {
+       result.push(ai);
+       ai++;
+       bi++;
+     }
+  }
+
+  return result;
+}
+
+*/   
+
 var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
+
 var expandKeys=function(fullpath,path,opts) {
 	var out=[];
 	path=JSON.parse(JSON.stringify(path))
@@ -64,41 +165,42 @@ var expandKeys=function(fullpath,path,opts) {
 	return out;
 }
 var expandToken=function(token,opts) {
-	//see test/yase-test.js for spec
-	if (!this.customfunc.simplifiedToken) return false;
 
 	opts=opts||{};
 	opts.max=opts.max||100;
 	var count=0;
 	var out=[];
 	var tree=this.customfunc.token2tree(token);
-	var keys=expandKeys.apply(this, [ tree,[],opts ]);
-	var simplified=[],count=[];
+	var expanded=expandKeys.apply(this, [ tree,[],opts ]);
+	var simplified=[],lengths=[];
 	if (this.customfunc.simplifiedToken) {
-		for (var i in keys) {
-			simplified.push(this.customfunc.simplifiedToken(keys[i]));
-
-			if (opts.count) {
-				var postings=this.getPostingById(keys[i]);
-				if (postings) count.push(postings.length);
-				else count.push(0)
-			}
+		for (var i=0;i<expanded.length;i++) {
+			simplified.push(this.customfunc.simplifiedToken(expanded[i]));
 		}
-	} else simplified=keys;
-	var counts=[];
+	} else simplified=expanded;
+
+	if (opts.getlengths) {
+		for (var i=0;i<expanded.length;i++) {
+			var postings=this.getPostingById(expanded[i]);
+			if (postings) lengths.push(postings.length);
+			else lengths.push(0)			
+		}
+	}
 	
-	return { raw:keys ,simplified:simplified, count: count, more: keys.length>=opts.max};
+	return { expanded:expanded ,simplified:simplified, 
+		lengths: lengths, 
+		more: expanded.length>=opts.max};
 
 }
-var profile=false;
-// TODO , wildcard '?' for 
-var loadtoken=function(token) {
+
+var loadToken=function(token,opts) {
+	opts=opts||{};
 	var op='and';
 	token=token.trim();
 	if (token.trim()[0]=='<') return false;
 
 	var lastchar=token[token.length-1];
-	if (lastchar=='^' || lastchar=='*') {
+	if (lastchar=='^' || lastchar=='%') {
 		token=token.substring(0,token.length-1);
 	}
 	if (lastchar=='^') { //do not expand if ends with ^
@@ -106,19 +208,19 @@ var loadtoken=function(token) {
 	}
 	if (lastchar=='!') {
 		op='andnot';
-		token=token.substring(0,token.length-1)
+		token=token.substring(0,token.length-1);
 	}
 
-	var exact=true;
-	if (lastchar=='*') exact=false; //automatic prefix
+	opts.exact=true;
+	if (lastchar=='%') opts.exact=false; //automatic prefix
 	
 	var t=this.customfunc.normalizeToken?
 		this.customfunc.normalizeToken.apply(this,[token]):token;
 	
-	var expandtokens=expandToken.apply(this,[ t , {exact:exact}]);
+	var expandtokens=expandToken.apply(this,[ t , opts]);
 	var posting=null;
 	if (expandtokens){
-		tokens=expandtokens.raw;
+		tokens=expandtokens.expanded;
 		if (tokens.length==1) {
 			posting=this.getPostingById(tokens[0]);	
 		} else {
@@ -131,246 +233,12 @@ var loadtoken=function(token) {
 	} else {
 		posting=this.getPostingById(t);	
 	}	
-	return {posting:posting,op:op};
-}
-
-var highlight=function(opts) {
-	var tokens=opts.tokenize.apply(this,[opts.text]);
-	var i=0,j=0,last=0,voff=0,now=0;
-	var output='';
-
-	while (tokens[i][0]=='<') output+=tokens[i++];
-
-	while (i<tokens.length) {
-		if (voff==opts.hits[j]) {
-			var ntoken=opts.ntokens[j];
-			var len=opts.tokenlengths[ntoken] || opts.tokenlengths[0];
-			output+= '<hl n="'+ntoken+'">';
-			while (len) {
-				output+=tokens[i];
-				if (i>=tokens.length) break;
-				if (tokens[i][0]!='<') {
-					voff++;
-					len--;
-				}
-				i++;
-			}
-			output+='</hl>';
-			j++;
-		} else {
-			output+=tokens[i];
-			if (tokens[i][0]!='<') voff++;
-			i++;
-		}
-	}
-	while (i<tokens.length) output+= tokens[i++];
-	return output;
-}
-//return highlighted texts given a raw hits
-var highlighttexts=function(seqarr,tofind,opts) {
-	opts.searchtype=opts.searchtype||"phraseSearch";
-	var R=this[opts.searchtype](tofind,{all:true});
-
-	if (typeof seqarr=='number' || typeof seqarr=='string') {
-		var t=this.getText(parseInt(seqarr));
-		if (R.grouped[seqarr]) {
-			return highlight({ text: t , hits: R.grouped[seqarr] , ntokens:R.ntokens[seqarr],
-			tokenlengths:R.tokenlengths} );
-		}
-		else return t;
-	} else {
-		var out="";
-		for (var i in seqarr) { //TODO : fix overflow slot
-			var seq=seqarr[i];
-			var hits=R.grouped[seq];
-			var t=this.getText(seq);
-			if (typeof t=='undefined') break;
-			if (hits) {
-				var hopts={ text: t , hits: hits, ntokens:R.ntokens[seq]||R.ntokens, 
-					tokenize:this.customfunc.tokenize,tokenlengths:R.tokenlengths};
-				out+= highlight.apply(this, [ hopts]);
-			}
-			else out+=t;
-		}
-		return out;
-	}
-}
-
-var highlightresult=function(R,ntokens,tokenlengths,nohighlight) {
-	var rescount=0;
-	var slotsize = 2 << (this.meta.slotshift -1);	
-	//console.log('highlightresult',R)
-	var lasti='', hits=[],addition=0;
-	var output={};
-	/* TODO , same sentence in multiple slot render once */
-	for (var i in R) {
-		var nslot=parseInt(i);
-		var text=this.getText(nslot);
-		var hits=R[i];
-		addition=0;
-		while (!text && nslot) {
-			nslot--;
-			text=this.getText(nslot);
-			addition+=slotsize;
-		}
-	
-		if (addition) hits=hits.map( function(j) {return addition+j});
-
-		if (nohighlight) {
-			var h=text;
-		} else {
-			var h=highlight.apply(this,[{
-				tokenize:this.customfunc.tokenize,
-				hits:hits,
-				ntokens:ntokens[i] || [0],
-				text:text,
-				tokenlengths:tokenlengths
-			}]);
-
-		}
-		output[nslot]=h;
-	}
-	return output;
-}
-//need optimized, use array slice
-var trimbyrange=function(g, start,end) {
-	var out={};
-	start=start||0;
-	if (end==-1) end=this.meta.slotcount+1;
-	for (var i in g) {
-		i=parseInt(i);
-		if (i>=start && i<end)  {
-			out[i]=g[i];
-		}
-	}
-	return out;
-}
-
-var renderhits=function(g,ntokens,opts) {
-	if (opts.countonly) {
-		return {count:Object.keys(g).length, hitcount: opts.rawposting.length};
-	}
-
-	if (opts.all) return {grouped:g, ntokens:ntokens, tokenlengths:opts.tokenlengths};
-	if (!opts.showtext && !opts.highlight) return [g,ntokens];
-	
-	//trim by range
-	if (opts.rangestart || ( typeof opts.rangeend !='undefined' && opts.rangend!=-1) ) {
-		g=trimbyrange.apply(this,[g,opts.rangestart,opts.rangeend]);
-	}
-
-	//trim output
-	if (opts.start!=undefined) {
-		opts.maxcount=opts.maxcount||10;
-		var o={};
-		var count=0,start=opts.start;
-		for (var i in g) {
-			if (start==0) {
-				if (count>=opts.maxcount) break;
-				o[i]=g[i];
-				count++;
-			} else {
-				start--;
-			}
-		}
-		g=o;
-	}
-
-	if (opts.grouped) return g;
-	if (profile) console.time('highlight')
-	var R="";
-	opts.showtext=opts.showtext || opts.highlight;
-
-	if (opts.showtext) {
-		R=highlightresult.apply(this,[g,ntokens,opts.tokenlengths,!opts.highlight]);
-	}
-	if (profile) console.timeEnd('highlight');
-	if (opts.array || opts.closesttag || opts.sourceinfo ) {
-		var out=[];
-		var seq=opts.start || 0;
-		for (var i in R) {
-			i=parseInt(i);
-			var obj={seq:seq,slot:i,text:R[i]};
-			if (opts.closesttag) {
-				obj.closest=this.closestTag.apply(this,[opts.closesttag,i]);
-			}
-			if (opts.sourceinfo) {
-				obj.sourceinfo=this.sourceInfo.apply(this,[i]);
-			}
-			seq++;
-			out.push(obj);
-		}
-		return out;
-	} else {
-		return R;	
-	}
-}
-var phraseSearch=function(tofind,opts) {
-	var tokenize=this.customfunc.tokenize;
-	if (!tokenize) throw 'no tokenizer';
-	if (!tofind) {
-		if (opts.countonly || opts.rawcountonly) return 0;
-		return [];
-	}
-	if (typeof tofind=='number') tofind=tofind.toString();
-	var postings=[],ops=[];
-	var tokens=tokenize.apply(this,[tofind.trim()]);
-	opts.tokenlengths=[tokens.length];
-	var g=null,raw=null;
-	var tag=opts.tag||"";
-	opts.array =true; //default output format
-	if (this.phrasecache_raw && this.phrasecache_raw[tofind]) {
-		raw=this.phrasecache_raw[tofind];
-	}
-
-	if (this.phrasecache&& this.phrasecache[tofind]) {
-		g=this.phrasecache[tofind];
-	} else {
-		if (profile) console.time('get posting');
-		for (var i in tokens) {
-			var loaded=loadtoken.apply(this,[tokens[i]])
-			if (loaded.posting) {
-				postings.push(loaded.posting);
-				ops.push(loaded.op);
-			}
-		}
-		if (profile) console.timeEnd('get posting');
-		if (profile) console.time('phrase merge')
-		if (!raw) raw=plist.plphrase(postings,ops);
-		if (profile) console.timeEnd('phrase merge')
-		if (profile) console.time('group block');
-		
-
-		var g=plist.groupbyblock(raw, this.meta.slotshift);
-		if (profile) console.timeEnd('group block')		
-		if (this.phrasecache) this.phrasecache[tofind]=g;
-		if (this.phrasecache_raw) this.phrasecache_raw[tofind]=raw;
-	}
-	if (opts.rawcountonly) return raw.length;
-	if (opts.raw) return raw;
-
-	if (tag) {
-		pltag=this.getTagPosting(tag);
-		//this.tagpostingcache[tag];
-		//if (!pltag) pltag=this.tagpostingcache[tag]=this.getTagPosting(tag);
-		
-		raw=plist.plhead(raw, pltag );
-		if (opts.rawcountonly) return raw.count;
-		g=plist.groupbyblock(raw, this.meta.slotshift);
-	}
-	opts.rawposting=raw;
-	return this.renderhits.apply(this,[g,[0],opts]);
+	var r={posting:posting,op:op};
+	if (opts.expanded) {
+		for(var i in expandtokens)r[i]=expandtokens[i];
+	};
+	return r;
 }
 
 
-module.exports={
-	nearby:boolsearch.nearby,
-	notnearby:boolsearch.notnearby,
-	followby:boolsearch.followby,
-	notfollowby:boolsearch.notfollowby,
-	boolSearch:boolsearch.boolSearch,
-	phraseSearch:phraseSearch,
-	expandToken:expandToken,
-	renderhits:renderhits,
-	highlighttexts:highlighttexts
-};
+module.exports={loadToken:loadToken}

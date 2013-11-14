@@ -73,7 +73,7 @@ module.exports=function( config ) {
 
     ydb.output.extra=config.extra||0;
 	ydb.output.meta.build=oldbuild+1;
-	ydb.save(config.output, {encoding:config.outputencoding,size:config.estimatesize});
+	ydb.save(config.output, {encoding:config.outputencoding,size:config.estimatesize,bigfile:config.bigfile});
 	console.log('output filename',config.output);
 	return JSON.parse(JSON.stringify(ydb.output.meta)); //prevent memory leak
 }

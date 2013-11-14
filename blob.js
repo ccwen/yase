@@ -63,6 +63,7 @@ var addblob=function(blobsetting, output) {
 	    //load blob
 	    for (var i in blobs) {
 	    	var fn=subdir+'/'+blobs[i];
+	    	  console.log('add blob',fn);
 	        var idx=blobs[i].lastIndexOf('/');
 	        if (idx>-1) {
 	        	var folders=blobs[i].substring(0,idx).split('/');
