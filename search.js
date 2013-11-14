@@ -100,6 +100,7 @@ function intersect_safe(a, b)
 
 var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
+var selector=require('./selector');
 
 var expandKeys=function(fullpath,path,opts) {
 	var out=[];
@@ -192,7 +193,31 @@ var expandToken=function(token,opts) {
 		more: expanded.length>=opts.max};
 
 }
-
+var loadGroupUnit=function(groupunit){
+	var gu=selector.parseSelector(groupunit);
+	var guposting=this.customfunc.getTagPosting.apply(this,[gu.tag]);
+	if (gu.key) { //load only p with attr
+		var newguposting=[];
+		var attrs=this.customfunc.getTagAttrs.apply(this,[gu.tag,gu.key]);	
+		for (var i in attrs) {
+			newguposting.push(guposting[i]);
+		}
+		guposting=newguposting;
+	} else if (gu.value) {
+		var newguposting=[];
+		var par=['tags',gu.tag,gu.attribute+'='].concat(gu.value.split('.'));
+		var ntag=this.get(par,true);
+		if (typeof ntag=='number') {
+			newguposting.push(guposting[ntag]);
+		} else {
+			for (var i=0;i<ntag.length;i++)	{
+				newguposting.push(guposting[ntag[i]]);
+			}
+		}
+		guposting=newguposting;
+	}
+	return guposting;
+}
 var loadToken=function(token,opts) {
 	opts=opts||{};
 	var op='and';
@@ -218,27 +243,36 @@ var loadToken=function(token,opts) {
 		this.customfunc.normalizeToken.apply(this,[token]):token;
 	
 	var expandtokens=expandToken.apply(this,[ t , opts]);
-	var posting=null;
-	if (expandtokens){
-		tokens=expandtokens.expanded;
-		if (tokens.length==1) {
-			posting=this.getPostingById(tokens[0]);	
-		} else {
-			var postings=[];
-			for (var i in tokens) {
-				postings.push(this.getPostingById(tokens[i]));
+	var posting=null;//try load from cache
+	if (!posting) {
+		if (expandtokens){
+			tokens=expandtokens.expanded;
+			if (tokens.length==1) {
+				posting=this.getPostingById(tokens[0]);	
+			} else {
+				var postings=[];
+				for (var i in tokens) {
+					postings.push(this.getPostingById(tokens[i]));
+				}
+				posting=plist.combine(postings);
 			}
-			posting=plist.combine(postings);
+		} else {
+			posting=this.getPostingById(t);	
 		}
-	} else {
-		posting=this.getPostingById(t);	
-	}	
+		//put into cache		
+	}
+
 	var r={posting:posting,op:op};
 	if (opts.expanded) {
 		for(var i in expandtokens)r[i]=expandtokens[i];
 	};
+	if (opts.groupunit) {
+		r.guposting=loadGroupUnit.apply(this,[opts.groupunit]);
+		r.grouped=plist.groupbyposting(posting,r.guposting);
+		//put into cache
+	}
 	return r;
 }
 
 
-module.exports={loadToken:loadToken}
+module.exports={loadToken:loadToken,loadGroupUnit:loadGroupUnit}

@@ -40,7 +40,7 @@ var groupsum=function(arr,levels) {
   posting= 3 , 5  //tag posting
   out = 3 , 2, 2
 */
-var groupbyposting = function (arr, posting) {
+var countbyposting = function (arr, posting) {
   if (!posting.length) return [arr.length];
   var out=[];
   for (var i=0;i<posting.length;i++) out[i]=0;
@@ -56,6 +56,27 @@ var groupbyposting = function (arr, posting) {
     p++;
   }
   out[posting.length] = arr.length-i; //remaining
+  return out;
+}
+
+var groupbyposting=function(arr,gposting,opts) {
+  if (!gposting.length) return [arr.length];
+  var out=[];
+  for (var i=0;i<=gposting.length;i++) out[i]=[];
+  
+  var p=0,i=0,lasti=0;
+  while (i<arr.length && p<gposting.length) {
+    if (arr[i]<gposting[p]) {
+      while (p<gposting.length && i<arr.length && arr[i]<gposting[p]) {
+        var start=0;
+        if (p>0) start=gposting[p-1];
+        out[p].push(arr[i++]-start);
+      }      
+    } 
+    p++;
+  }
+  //remaining
+  while(i<arr.length) out[out.length-1].push(arr[i++]-gposting[gposting.length-1]);
   return out;
 }
 var groupbyblock2 = function(ar, ntoken,slotshift,opts) {
@@ -242,6 +263,7 @@ plist.plhead=plhead;
 
 plist.groupbyblock=groupbyblock;
 plist.groupbyblock2=groupbyblock2;
+plist.countbyposting=countbyposting;
 plist.groupbyposting=groupbyposting;
 plist.groupsum=groupsum;
 plist.combine=combine;

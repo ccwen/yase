@@ -277,7 +277,7 @@ var buildToc=function(toc,opts) {
 	}
 	var hits=null;
 	if (res.length) {
-		var g=plist.groupbyposting(res, Tvpos);
+		var g=plist.countbyposting(res, Tvpos);
 		hits=plist.groupsum(g,T.map(function(a){return a[0]}));
 	}
 

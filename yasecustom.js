@@ -66,6 +66,11 @@ var getTagAttr=function(tagname,ntag,attributename) {
 	var par=['tags',tagname,attributename,ntag];
 	return this.get(par) ;
 }
+var getTagAttrs=function(tagname,attributename) {
+	var par=['tags',tagname,attributename];
+	return this.get(par,true) ;
+}
+
 var findTag=function(tagname,attributename,value) {
 	var par=['tags',tagname,attributename+'='].concat(value.split('.'));
 	var tag={};
@@ -172,6 +177,7 @@ module.exports={
 	getTag:getTag,
 	findTag:findTag,
 	getTagAttr:getTagAttr,
+	getTagAttrs:getTagAttrs,
 	isBreaker:isBreaker,
 	splitter:require('./splitter'),
 	tokenize:require('./tokenize'),

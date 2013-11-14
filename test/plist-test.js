@@ -3,7 +3,7 @@
     plist=require('../plist');
 
 vows.describe('plist test suite').addBatch({
-    'groupbyposting': {
+    'countbyposting': {
         topic: function () {
         	return [
                 [1,2,3,4,5,6,7],
@@ -11,7 +11,7 @@ vows.describe('plist test suite').addBatch({
             ];
         },
         run:function(topic){
-            var res=plist.groupbyposting(topic[0],topic[1]);
+            var res=plist.countbyposting(topic[0],topic[1]);
             assert.deepEqual(res,[3,2,2]);
         }
     },
