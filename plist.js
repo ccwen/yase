@@ -101,7 +101,7 @@ var groupbyblock2 = function(ar, ntoken,slotshift,opts) {
   if (opts) opts.groupcount=groupcount;
   return [r,ntokens];
 }
-var groupbyblock = function (ar, slotshift, opts) {
+var groupbyslot = function (ar, slotshift, opts) {
   if (!ar.length)
 	return {};
   
@@ -261,7 +261,7 @@ plist.unpack=unpack;
 plist.plphrase=plphrase;
 plist.plhead=plhead;
 
-plist.groupbyblock=groupbyblock;
+plist.groupbyslot=groupbyslot;
 plist.groupbyblock2=groupbyblock2;
 plist.countbyposting=countbyposting;
 plist.groupbyposting=groupbyposting;

@@ -342,7 +342,7 @@ var phraseSearch=function(tofind,opts) {
 		if (profile) console.time('group block');
 		
 
-		var g=plist.groupbyblock(raw, this.meta.slotshift);
+		var g=plist.groupbyslot(raw, this.meta.slotshift);
 		if (profile) console.timeEnd('group block')		
 		if (this.phrasecache) this.phrasecache[tofind]=g;
 		if (this.phrasecache_raw) this.phrasecache_raw[tofind]=raw;
@@ -357,7 +357,7 @@ var phraseSearch=function(tofind,opts) {
 		
 		raw=plist.plhead(raw, pltag );
 		if (opts.rawcountonly) return raw.count;
-		g=plist.groupbyblock(raw, this.meta.slotshift);
+		g=plist.groupbyslot(raw, this.meta.slotshift);
 	}
 	opts.rawposting=raw;
 	return this.renderhits.apply(this,[g,[0],opts]);

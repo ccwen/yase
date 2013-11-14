@@ -102,6 +102,7 @@ var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
 var selector=require('./selector');
 
+
 var expandKeys=function(fullpath,path,opts) {
 	var out=[];
 	path=JSON.parse(JSON.stringify(path))
@@ -165,6 +166,7 @@ var expandKeys=function(fullpath,path,opts) {
 	}
 	return out;
 }
+/* load similar token with same prefix or simplified (dediacritic )*/
 var expandToken=function(token,opts) {
 
 	opts=opts||{};
@@ -193,10 +195,16 @@ var expandToken=function(token,opts) {
 		more: expanded.length>=opts.max};
 
 }
+/* get posting of group unit
+  group unit may have 3 cases,
+  1) pure tag <p>
+  2) tag with attribute p[n] match <p n="1"> , <p n="2"> but not <p> or <p id="x">
+  3) tag with a given value, e.g div[type=sutta]
+*/
 var loadGroupUnit=function(groupunit){
 	var gu=selector.parseSelector(groupunit);
 	var guposting=this.customfunc.getTagPosting.apply(this,[gu.tag]);
-	if (gu.key) { //load only p with attr
+	if (gu.key) { //no value only attribute
 		var newguposting=[];
 		var attrs=this.customfunc.getTagAttrs.apply(this,[gu.tag,gu.key]);	
 		for (var i in attrs) {
@@ -218,26 +226,39 @@ var loadGroupUnit=function(groupunit){
 	}
 	return guposting;
 }
+/*
+  load posting of token and it's variants 
+  token may ends with operator 
+  ^  verbatim no expansion, 
+  %  tokens with same prefix
+  !  not operation  //must be last one
+  ^! exclue verbatim token
+  %! exclude all tokens with same prefix
+*/
 var loadToken=function(token,opts) {
 	opts=opts||{};
+	var PREFIX='%', VERBATIM='^'
 	var op='and';
 	token=token.trim();
 	if (token.trim()[0]=='<') return false;
 
-	var lastchar=token[token.length-1];
-	if (lastchar=='^' || lastchar=='%') {
-		token=token.substring(0,token.length-1);
-	}
-	if (lastchar=='^') { //do not expand if ends with ^
-		return {posting:this.getPostingById(token),op:op};
-	}
 	if (lastchar=='!') {
 		op='andnot';
 		token=token.substring(0,token.length-1);
+		lastchar=token[token.length-1];
 	}
 
+	var lastchar=token[token.length-1];
+	if (lastchar==VERBATIM || lastchar==PREFIX) {
+		token=token.substring(0,token.length-1);
+	}
+	if (lastchar==VERBATIM) { //do not expand if ends with ^
+		return {posting:this.getPostingById(token),op:op};
+	}
+
+
 	opts.exact=true;
-	if (lastchar=='%') opts.exact=false; //automatic prefix
+	if (lastchar==PREFIX) opts.exact=false; //automatic prefix
 	
 	var t=this.customfunc.normalizeToken?
 		this.customfunc.normalizeToken.apply(this,[token]):token;
@@ -270,9 +291,15 @@ var loadToken=function(token,opts) {
 		r.guposting=loadGroupUnit.apply(this,[opts.groupunit]);
 		r.grouped=plist.groupbyposting(posting,r.guposting);
 		//put into cache
+	} else if (opts.groupbyslot) {
+		r.grouped=plist.groupbyslot(posting, this.meta.slotshift);
 	}
 	return r;
 }
 
 
-module.exports={loadToken:loadToken,loadGroupUnit:loadGroupUnit}
+module.exports={
+	loadToken:loadToken,
+	expandToken:expandToken,
+	loadGroupUnit:loadGroupUnit
+};
