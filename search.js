@@ -202,6 +202,17 @@ var loadTerm=function(token,opts) {
 	}
 	return r;
 }
+var isWildcard=function(raw) {
+	return !!raw.match(/[\*,\?]/);
+}
+var parseWildcard=function(raw) {
+	var n=parseInt(raw,10);
+	var qcount=raw.split('?').length-1;
+	var scount=raw.split('*').length-1;
+	if (qcount) type='?';
+	else if (scount) type='*';
+	return {wildcard:type,  width: n , op:'wildcard'};
+}
 var parseTerm = function(raw,opts) {
 	var res={raw:raw,tokens:null,term:'',op:''};
 	var term=raw;
@@ -229,7 +240,7 @@ var loadTerm=function() {
 	var terms=this.terms;
 	for (var i in this.terms) {
 		var term=terms[i].term;
-		if (!terms[i].posting) {
+		if (!terms[i].posting && terms[i].op!='wildcard') {
 			if (terms[i].tokens) { //term expands to multiple tokens
 				var postings=[];
 				for (var j in terms[i].tokens) {
@@ -305,15 +316,18 @@ var groupBy=function(gu) {
 var newQuery =function(query,opts) {
 	var phrases=taghandlers.splitSlot.apply(this,[query]);
 	var phrase_terms=[];
-	var terms=[],variants=[];
+	var terms=[],variants=[],termcount=0;
 	for (var i=0;i<phrases.length;i++) {
 		var tokens=this.customfunc.tokenize.apply(this,[phrases[i]]);
 		phrase_terms.push([]);
 		for (var j in tokens) {
 			var raw=tokens[j];
-			phrase_terms[i].push(terms.length);
-
-			terms.push(parseTerm.apply(this,[raw]));
+			if (isWildcard(raw)) {
+				terms.push(parseWildcard.apply(this,[raw]));
+			} else {
+				terms.push(parseTerm.apply(this,[raw]));
+				phrase_terms[i].push(termcount++);
+			}
 		}
 	}
 	return {

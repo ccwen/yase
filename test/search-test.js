@@ -41,7 +41,7 @@ var query3="a1 12? b2";
 QUnit.test("newQuery 3",function() {
   var res=search.newQuery.apply(db,[query3]);
   equal(1,1)
-  //console.log(res)
+  console.log(res)
 });
 
 QUnit.test("load and group",function() {

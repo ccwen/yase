@@ -1,5 +1,4 @@
 var Schema=require('./schema');
-var selector=require('./selector');
 var predefined = {
 	pb: function(taginfo) {
 		if (taginfo.closetag && !taginfo.opentag) return;
@@ -11,6 +10,22 @@ var predefined = {
 		}
 	}
 }
+var parseSelector=function(sel) {  // tag[attr=value]
+	  var m=sel.match(/(.*?)\[(.*?)=(.*)/);
+	  if (!m) {
+	  	var m=sel.match(/(.*?)\[(.*)/);
+	  	if (!m) {
+	  		return {tag:sel};
+	  	}
+		var tagname=m[1], key=m[2];
+		if (key[key.length-1]===']') key=key.substring(0,key.length-1);
+		return {tag:tagname,key:key};
+	  } else {
+		  var tagname=m[1], attributename=m[2],value=m[3];
+		  if (value[value.length-1]===']') value=value.substring(0,value.length-1);
+		  return {tag:tagname,attribute:attributename,value:value};
+	  }
+};
 
 var setschema=function(schema) {
 	var ctx=this.context;
@@ -29,7 +44,7 @@ var setschema=function(schema) {
 		for (var k in ATTR) {
 			if (ATTR[k].regstr) ATTR[k].regex=new RegExp(ATTR[k].regstr)
 			if (ATTR[k].prefix) {
-				var sel=selector.parseSelector(ATTR[k].prefix);
+				var sel=parseSelector(ATTR[k].prefix);
 			}
 		}
 	}	
@@ -99,7 +114,7 @@ var addprefix=function(prefix) {
 	var out=[];
 	for (var i in prefixs) {
 		var pf=prefixs[i];
-		var sel=selector.parseSelector(pf);
+		var sel=parseSelector(pf);
 		if (!this.output.tags[sel.tag]) return "";
 		if (sel.key) {
 			var V=this.output.tags[sel.tag][sel.key];	
@@ -294,22 +309,6 @@ var dotag=function(tag) {
 	if (ti.handler) ti.handler.apply(this,[ti]);
 	return defaulttaghandler.apply(this,[ti]);
 }
-var parseSelector=function(sel) {  // tag[attr=value]
-	  var m=sel.match(/(.*?)\[(.*?)=(.*)/);
-	  if (!m) {
-	  	var m=sel.match(/(.*?)\[(.*)/);
-	  	if (!m) {
-	  		return {tag:sel};
-	  	}
-		var tagname=m[1], key=m[2];
-		if (key[key.length-1]===']') key=key.substring(0,key.length-1);
-		return {tag:tagname,key:key};
-	  } else {
-		  var tagname=m[1], attributename=m[2],value=m[3];
-		  if (value[value.length-1]===']') value=value.substring(0,value.length-1);
-		  return {tag:tagname,attribute:attributename,value:value};
-	  }
-};
 
 var splitSlot=function(B,callback) {
 	var res=[],last=0,i=0,intag=false;
