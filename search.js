@@ -2,7 +2,7 @@
   search rewrite
 
 
-  loadToken    
+  loadTerm   
      input  : token with suffix operator
         rasa^  //for pali ,exact
         rasa%  //auto expansion (up to 100 words with same prefix)
@@ -22,12 +22,12 @@
     input : list of token (wild card, fix length , variable length)
             token delimeter can be space, Tibetan Tsek
             wild card served as token delimeter
-            ?12  //skip 12 token
-            *12  //within 12
+            12?  //skip 12 token
+            12*  //within 12
             A?B  //skip 1 token
             A*B  // AB or A?B
             A**B // AB or A?B or A??B
-            A2B // same as above
+            A*2B // same as above
             A*  // same as A
             *A  // same as A
             
@@ -100,81 +100,17 @@ function intersect_safe(a, b)
 
 var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
-var selector=require('./selector');
+var taghandlers=require('./taghandlers.js');
 
-
-var expandKeys=function(fullpath,path,opts) {
-	var out=[];
-	path=JSON.parse(JSON.stringify(path))
-	path.unshift('postings')
-	var out1=this.keys(path);
-	path.shift();
-
-	var prefix=" ";
-	if (path.length<fullpath.length) {
-		prefix=fullpath[path.length];
-	} else {
-		prefix="" ;//final
-	}
-	out1=out1.sort(function(a,b){
-		if (a<b) return -1;
-		else if (a>b) return 1;
-		else return 0;
-	});
-	
-	for (var i in out1) {
-		var lead=out1[i];
-		var sim=lead;
-
-		if (path[path.length-1] && prefix!=" ") {
-			lead=lead.substring(0, prefix.length);
-		}
-
-		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
-		if (this.customfunc.simplifiedToken) {
-			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
-			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
-		}
-		
-		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
-			//console.log('hit',out1[i])
-
-			var start=0;
-			if (path[path.length-1] && prefix!=" ") start=prefix.length;
-
-			//if (out1[i]==" ") out.push(path.join(""));
-			if (path.length<fullpath.length-1 && out1[i]!=" ") {
-
-				if (opts.exact && out1[i]!=fullpath[path.length] &&
-						sim!=fullpath[path.length]) continue;
-				
-				path.push(out1[i]);
-				out=out.concat(expandKeys.apply(this,[fullpath,path,opts]));	
-				path.pop();
-			} else {
-				if (opts.exact) {
-					if (out1[i]==fullpath[path.length] || 
-							sim==fullpath[path.length]) {
-							out.push(path.join("")+out1[i].trim());		
-					}
-				} else {
-					out.push(path.join("")+out1[i].trim());	
-				}
-			}
-			if (out.length>=opts.max) break;
-		}
-	}
-	return out;
-}
 /* load similar token with same prefix or simplified (dediacritic )*/
-var expandToken=function(token,opts) {
+var getTermVariants=function(term,opts) {
 
 	opts=opts||{};
 	opts.max=opts.max||100;
 	var count=0;
 	var out=[];
-	var tree=this.customfunc.token2tree(token);
-	var expanded=expandKeys.apply(this, [ tree,[],opts ]);
+	var tree=this.customfunc.token2tree.apply(this,[term]);
+	var expanded=this.customfunc.expandToken.apply(this, [ tree,[],opts ]);
 	var simplified=[],lengths=[];
 	if (this.customfunc.simplifiedToken) {
 		for (var i=0;i<expanded.length;i++) {
@@ -184,7 +120,7 @@ var expandToken=function(token,opts) {
 
 	if (opts.getlengths) {
 		for (var i=0;i<expanded.length;i++) {
-			var postings=this.getPostingById(expanded[i]);
+			var postings=this.getPosting(expanded[i]);
 			if (postings) lengths.push(postings.length);
 			else lengths.push(0)			
 		}
@@ -195,37 +131,7 @@ var expandToken=function(token,opts) {
 		more: expanded.length>=opts.max};
 
 }
-/* get posting of group unit
-  group unit may have 3 cases,
-  1) pure tag <p>
-  2) tag with attribute p[n] match <p n="1"> , <p n="2"> but not <p> or <p id="x">
-  3) tag with a given value, e.g div[type=sutta]
-*/
-var loadGroupUnit=function(groupunit){
-	var gu=selector.parseSelector(groupunit);
-	var guposting=this.customfunc.getTagPosting.apply(this,[gu.tag]);
-	if (gu.key) { //no value only attribute
-		var newguposting=[];
-		var attrs=this.customfunc.getTagAttrs.apply(this,[gu.tag,gu.key]);	
-		for (var i in attrs) {
-			newguposting.push(guposting[i]);
-		}
-		guposting=newguposting;
-	} else if (gu.value) {
-		var newguposting=[];
-		var par=['tags',gu.tag,gu.attribute+'='].concat(gu.value.split('.'));
-		var ntag=this.get(par,true);
-		if (typeof ntag=='number') {
-			newguposting.push(guposting[ntag]);
-		} else {
-			for (var i=0;i<ntag.length;i++)	{
-				newguposting.push(guposting[ntag[i]]);
-			}
-		}
-		guposting=newguposting;
-	}
-	return guposting;
-}
+
 /*
   load posting of token and it's variants 
   token may ends with operator 
@@ -235,7 +141,7 @@ var loadGroupUnit=function(groupunit){
   ^! exclue verbatim token
   %! exclude all tokens with same prefix
 */
-var loadToken=function(token,opts) {
+var loadTerm=function(token,opts) {
 	opts=opts||{};
 	var PREFIX='%', VERBATIM='^'
 	var op='and';
@@ -253,7 +159,7 @@ var loadToken=function(token,opts) {
 		token=token.substring(0,token.length-1);
 	}
 	if (lastchar==VERBATIM) { //do not expand if ends with ^
-		return {posting:this.getPostingById(token),op:op};
+		return {posting:this.getPosting(token),op:op};
 	}
 
 
@@ -263,32 +169,32 @@ var loadToken=function(token,opts) {
 	var t=this.customfunc.normalizeToken?
 		this.customfunc.normalizeToken.apply(this,[token]):token;
 	
-	var expandtokens=expandToken.apply(this,[ t , opts]);
+	var variants=getTermVariants.apply(this,[ t , opts]);
 	var posting=null;//try load from cache
 	if (!posting) {
-		if (expandtokens){
-			tokens=expandtokens.expanded;
+		if (variants){
+			tokens=variants.expanded;
 			if (tokens.length==1) {
-				posting=this.getPostingById(tokens[0]);	
+				posting=this.getPosting(tokens[0]);	
 			} else {
 				var postings=[];
 				for (var i in tokens) {
-					postings.push(this.getPostingById(tokens[i]));
+					postings.push(this.getPosting(tokens[i]));
 				}
 				posting=plist.combine(postings);
 			}
 		} else {
-			posting=this.getPostingById(t);	
+			posting=this.getPosting(t);	
 		}
 		//put into cache		
 	}
 
 	var r={posting:posting,op:op};
 	if (opts.expanded) {
-		for(var i in expandtokens)r[i]=expandtokens[i];
+		for(var i in variants)r[i]=variants[i];
 	};
 	if (opts.groupunit) {
-		r.guposting=loadGroupUnit.apply(this,[opts.groupunit]);
+		r.guposting=this.customfunc.loadGroupPosting.apply(this,[opts.groupunit]);
 		r.grouped=plist.groupbyposting(posting,r.guposting);
 		//put into cache
 	} else if (opts.groupbyslot) {
@@ -296,10 +202,127 @@ var loadToken=function(token,opts) {
 	}
 	return r;
 }
+var parseTerm = function(raw,opts) {
+	var res={raw:raw,tokens:null,term:'',op:''};
+	var term=raw;
+	var op=0;
+	var firstchar=term[0];
+	if (firstchar=='-') {
+		term=term.substring(1);
+		res.op='exclude'; //exclude
+	}
+	term=this.customfunc.normalizeToken.apply(this,[term]);
+	var lastchar=term[term.length-1];
+	
+	if (lastchar=='%') {
+		res.tokens=getTermVariants.apply(this,[term.substring(0,term.length-1)]).expanded;
+		res.op='prefix'
+	} else if (lastchar=='^') {
+		term=term.substring(0,term.length-1);
+		res.op='exact';
+	}
+	res.term=term;
+	return res;
+}
+var loadTerm=function() {
+	var db=this.db, cache=db.postingcache;
+	var terms=this.terms;
+	for (var i in this.terms) {
+		var term=terms[i].term;
+		if (!terms[i].posting) {
+			if (terms[i].tokens) { //term expands to multiple tokens
+				var postings=[];
+				for (var j in terms[i].tokens) {
+					postings.push(db.getPosting(terms[i].tokens[j]));
+				}
+				terms[i].posting=plist.combine(postings);
+			} else { //term == token
+				terms[i].posting=db.getPosting(term);
+			}
+			cache[term]=terms[i].posting;
+		}
+	}
 
+}
+var loadPhrase=function(phrase) {
+//	console.log(phrase)
+	// if number == a term
+	// else if '?' single match
+	// else if '*2' 
+}
+var load=function() {
+	loadTerm.apply(this);
+	var phrases=this.phrases;
+	for (var i in phrases) {
+		loadPhrase.apply(this,[phrases[i]]);
+	}
+	this.loaded=true;
+	return this;
+}
+var matchSlot=function(pl) {
+	return plist.matchSlot(pl, this.db.meta.slotshift);
+}
+var matchPosting=function(pl) {
+	return plist.matchPosting(pl,this.groupposting);
+}
+var groupBy=function(gu) {
+	gu=gu||'';
+	if (!this.loaded) this.load();
 
+	var db=this.db,terms=this.terms,phrases=this.phrases;
+	var docfreqcache=this.db.docfreqcache;
+	var matchfunc=matchSlot;
+	if (gu) {
+		var groupcache=this.db.groupcache;
+		this.groupposting=groupcache[gu];
+		if (!this.groupposting) {
+			this.groupposting=groupcache[gu]
+			 =db.customfunc.loadGroupPosting.apply(db,[gu]);	
+		}
+		
+		matchfunc=matchPosting;
+		this.groupunit=gu;
+	}
+	
+	for (var i in terms) {
+		var term=terms[i].term;
+		var termdf=docfreqcache[term];
+		if (!termdf) termdf=docfreqcache[term]={};
+		if (!termdf[this.groupunit]) {
+			termdf[this.groupunit]={doclist:null,termfreq:null};
+			var res=matchfunc.apply(this,[terms[i].posting]);;
+			terms[i].freq=res.freq;
+			terms[i].docs=res.docs;
+			termdf[this.groupunit]={doclist:terms[i].docs,termfreq:terms[i].freq};
+		}
+	}
+
+	for (var i in phrases) {
+		//
+	}
+	return this;
+}
+var newQuery =function(query,opts) {
+	var phrases=taghandlers.splitSlot.apply(this,[query]);
+	var phrase_terms=[];
+	var terms=[],variants=[];
+	for (var i=0;i<phrases.length;i++) {
+		var tokens=this.customfunc.tokenize.apply(this,[phrases[i]]);
+		phrase_terms.push([]);
+		for (var j in tokens) {
+			var raw=tokens[j];
+			phrase_terms[i].push(terms.length);
+
+			terms.push(parseTerm.apply(this,[raw]));
+		}
+	}
+	return {
+		db:this,query:query,phrases:phrase_terms,terms:terms,
+		groupunit:'',
+		load:load,groupBy:groupBy,
+	};
+}
 module.exports={
-	loadToken:loadToken,
-	expandToken:expandToken,
-	loadGroupUnit:loadGroupUnit
+	newQuery:newQuery,
+	getTermVariants:getTermVariants
 };

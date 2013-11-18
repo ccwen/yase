@@ -127,20 +127,7 @@ var indexbuffer=function(B,fn) {
 	
 	var i=0,intag=false;
 
-	while (i<B.length) {
-		if (B[i]=='<') intag=true;
-		if (this.customfunc.isBreaker(B[i]) && !intag) {
-			while ( i+1<B.length && (this.customfunc.isBreaker(B[i+1]) 
-				|| this.customfunc.isSpaceChar(B[i+1]))) {
-				//start of a slot should not be space or breaker
-				i++;
-			}
-			doslot.apply(this,[i+1]);
-		}
-		if (B[i]=='>') intag=false;
-		i++;
-	}
-	doslot.apply(this,[B.length]);
+	taghandlers.splitSlot.apply(this,[B, doslot]);
 }
 
 var initinverted=function(opts) {
@@ -260,7 +247,7 @@ var save=function(filename,opts) {
 	if (debug) console.time('save file');
 	if (this.customfunc.postings2tree) {
 		console.log('performing postings2tree');
-		this.output.postings=this.customfunc.postings2tree(this.output.postings);
+		this.output.postings=this.customfunc.postings2tree.apply(this,[this.output.postings]);
 	}
 
 	this.output.customfunc=packcustomfunc.call(this);

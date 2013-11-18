@@ -294,6 +294,46 @@ var dotag=function(tag) {
 	if (ti.handler) ti.handler.apply(this,[ti]);
 	return defaulttaghandler.apply(this,[ti]);
 }
+var parseSelector=function(sel) {  // tag[attr=value]
+	  var m=sel.match(/(.*?)\[(.*?)=(.*)/);
+	  if (!m) {
+	  	var m=sel.match(/(.*?)\[(.*)/);
+	  	if (!m) {
+	  		return {tag:sel};
+	  	}
+		var tagname=m[1], key=m[2];
+		if (key[key.length-1]===']') key=key.substring(0,key.length-1);
+		return {tag:tagname,key:key};
+	  } else {
+		  var tagname=m[1], attributename=m[2],value=m[3];
+		  if (value[value.length-1]===']') value=value.substring(0,value.length-1);
+		  return {tag:tagname,attribute:attributename,value:value};
+	  }
+};
+
+var splitSlot=function(B,callback) {
+	var res=[],last=0,i=0,intag=false;
+	while (i<B.length) {
+		if (B[i]=='<') intag=true;
+		if (this.customfunc.isBreaker(B[i]) && !intag) {
+			while ( i+1<B.length && (this.customfunc.isBreaker(B[i+1]) 
+				|| this.customfunc.isSpaceChar(B[i+1]))) {
+				//start of a slot should not be space or breaker
+				i++;
+			}
+			if (callback) callback.apply(this,[i+1]);
+			else {
+				res.push( B.substring(last,i+1) );
+				last=i+1;
+			}
+		}
+		if (B[i]=='>') intag=false;
+		i++;
+	}
+	if (callback) callback.apply(this,[B.length]);
+	else res.push (B.substring(last));
+	return res;
+}
 
 var initialize=function() {
 	this.context.tagstack=[];
@@ -301,4 +341,8 @@ var initialize=function() {
 
 }
 module.exports={predefined:predefined,dotag:dotag,
-	loadschema:loadschema,setschema:setschema, initialize:initialize};
+	loadschema:loadschema,setschema:setschema, 
+	initialize:initialize,
+	splitSlot:splitSlot,
+	parseSelector:parseSelector
+};

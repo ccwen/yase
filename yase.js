@@ -6,17 +6,16 @@ yadb for supporting full text search
 
 var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
-var selector=require('./selector');
 var Search=require('./search1');
 
-var getPostingById=function(id) {
+var getPosting=function(token) {
 	if (this.customfunc.token2tree) {
-		var idarr=this.customfunc.token2tree.apply(this,[id]);
+		var tokenarr=this.customfunc.token2tree.apply(this,[token]);
 	} else {
-		var idarr=[id];
+		var tokenarr=[token];
 	}
-	idarr.unshift('postings');
-	var r=this.get(idarr,true);
+	tokenarr.unshift('postings');
+	var r=this.get(tokenarr,true);
 	return r;
 }
 
@@ -123,7 +122,7 @@ var getTagInRange=function(start,end,tagname,opts) {
 var getTextByTag=function(opts) {
 	var maxslot=opts.maxslot || 1000;
 	if (opts.selector) {
-		sel=selector.parseSelector(opts.selector);
+		sel=this.parseSelector(opts.selector);
 		opts.tag=sel.tag;
 		opts.attribute=sel.attribute;
 		opts.value=sel.value;
@@ -192,7 +191,7 @@ var firstTagAfter=function(tagname,attributename,start) {
 	return tags;
 }
 var findTagBySelector=function(selector) {
-	var T=selector.parseSelector(selector);
+	var T=this.parseSelector(selector);
 	return this.customfunc.findTag.apply(this,[T.tag,T.attribute,T.value]);
 }
 var getTagAttr=function(tagname,ntag,attributename) {
@@ -213,7 +212,7 @@ var closestTag=function(tagname,nslot,opts) {
 	var output=[];
 	for (var i in tagname) {
 		var tn=tagname[i];
-		sel=selector.parseSelector(tn);
+		sel=this.parseSelector(tn);
 		if (sel.attribute && sel.value) { //plain tagname
 			//var slots= this.getdb().get(['tags',sel.tag,'slot'],true);
 			var vposarr=this.get(['tags',sel.tag,sel.attribute+'='+sel.value,'_vpos']);
@@ -363,21 +362,27 @@ var yase_use = function(fn,opts) {
 		instance.phraseSearch=Search.phraseSearch;
 		instance.boolSearch=Search.boolSearch;
 		instance.renderhits=Search.renderhits;
-		instance.getPostingById=getPostingById;
+		instance.getPosting=getPosting;
 		instance.closestTag=closestTag;
 		instance.sourceInfo=sourceInfo;
 		instance.getTagInRange=getTagInRange;
 		instance.genToc=genToc;
-		instance.expandToken=Search.expandToken;
 		instance.buildToc=buildToc;
 		instance.phrasecache={};
 		instance.phrasecache_raw={};
+
+		instance.postingcache={};
+		instance.docfreqcache={}; // term/phrase doclist and freq
+		instance.groupcache={};  //store group posting
+
 		instance.tagpostingcache={};
-		instance.parseSelector=selector.parseSelector;
 		instance.getTextRange=getTextRange;		
 		instance.getRange=getRange;	
-
+		instance.parseSelector=require('./taghandlers').parseSelector;
 		instance.yaseloaded=true;
+
+		instance.expandToken=Search.expandToken;
+		instance.newQuery=Search.newQuery;
 		instance.getdb=function() {return db};
 	}
 

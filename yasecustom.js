@@ -7,9 +7,14 @@ var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
 	return  ( c==0xf0d ||c==0xf0e || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
 }
+var isSearchableChar=function(c) {
+	var code=c.charCodeAt(0);
+	return ((code>=0x30 && code<=0x39)||(code>=0x41 && code<=0x5a)
+	 || (code>=0x61 && code<=0x7a) || c=='%'); //% for prefix match
+}
 var isSpaceChar=function(c) {
 	return ((c.charCodeAt(0)>=0x2000 && c.charCodeAt(0)<=0x206f) 
-		|| c<=' '|| c=='?'
+		|| c<=' ' 
 		|| c=='|' || c=='~' || c=='`' || c==';' || c=='.' || c==','
 		|| c=='>' || c==':' || c=='}'
 		|| c=='=' || c=='@' || c==']' || c==')' || c=='!'
@@ -104,6 +109,7 @@ var findTag=function(tagname,attributename,value) {
 	return  out;
 }
 var token2tree=function(tk) {
+
 	var token2tree_western=function(tk) {
 	//for chinese. 
 		var vowels=['a','ā','i','o','u','ī','ū','e'];
@@ -136,9 +142,9 @@ var token2tree=function(tk) {
 	}
 	
 	var c=tk.charCodeAt(0);
-	if ((c>=0x61 && c<=0x7a) || c==0xF1 ||
+	if ((c>=0x41 && c<=0x7a) || c==0xF1 ||
 	  (c>=0x100 && c<=0x24f  ) || (c>=0x1E00 && c<=0x1EFF)) {
-		var T=token2tree_western(tk);
+		var T=token2tree_western.apply(this,[this.customfunc.simplifiedToken.apply(this,[tk])]);
 	} else {
 		var T=[];
 		T.push( '$'+(c >> 8).toString(16) );
@@ -150,7 +156,7 @@ var token2tree=function(tk) {
 var postings2tree=function(o) {
 	var res={};
 	for (var i in o) {
-		var T=token2tree(i);
+		var T=token2tree.apply(this,[i]);
 		var node=res;
 		for (var j=0;j<T.length-1;j++) {
 			if (!node[ T[j] ]) node[ T[j] ]={};
@@ -162,15 +168,116 @@ var postings2tree=function(o) {
 }
 var normalizeToken=function(tk) {
 	var isSpaceChar=this.customfunc.isSpaceChar;
+	var isSearchableChar=this.customfunc.isSearchableChar;
 	var isCJK=this.customfunc.isCJK;
+	tk=this.customfunc.simplifiedToken(tk);
 	var start,i=0;
-	while (i<tk.length &&isSpaceChar(tk[i]) ) i++;
+	while (i<tk.length && isSpaceChar(tk[i]) ) i++;
 	start=i;
 	if (tk[i]=='&' || tk[i]=='<' ||
 		isCJK(tk.charCodeAt(i))) return tk.substring(start).trim();
-	while (i<tk.length && !isSpaceChar(tk[i]))i++;
+	while (i<tk.length && isSearchableChar(tk[i]))i++;
 	end=i;
 	return tk.substr(start,end);
+}
+
+
+var expandToken=function(fullpath,path,opts) {
+	var out=[];
+	path=JSON.parse(JSON.stringify(path))
+	path.unshift('postings')
+	var out1=this.keys(path);
+	path.shift();
+
+	var prefix=" ";
+	if (path.length<fullpath.length) {
+		prefix=fullpath[path.length];
+	} else {
+		prefix="" ;//final
+	}
+	out1=out1.sort(function(a,b){
+		if (a<b) return -1;
+		else if (a>b) return 1;
+		else return 0;
+	});
+	
+	for (var i in out1) {
+		var lead=out1[i];
+		var sim=lead;
+
+		if (path[path.length-1] && prefix!=" ") {
+			lead=lead.substring(0, prefix.length);
+		}
+
+		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
+		if (this.customfunc.simplifiedToken) {
+			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
+			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
+		}
+		
+		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
+			//console.log('hit',out1[i])
+
+			var start=0;
+			if (path[path.length-1] && prefix!=" ") start=prefix.length;
+
+			//if (out1[i]==" ") out.push(path.join(""));
+			if (path.length<fullpath.length-1 && out1[i]!=" ") {
+
+				if (opts.exact && out1[i]!=fullpath[path.length] &&
+						sim!=fullpath[path.length]) continue;
+				
+				path.push(out1[i]);
+				out=out.concat(arguments.callee.apply(this,[fullpath,path,opts]));	
+				path.pop();
+			} else {
+				if (opts.exact) {
+					if (out1[i]==fullpath[path.length] || 
+							sim==fullpath[path.length]) {
+							out.push(path.join("")+out1[i].trim());		
+					}
+				} else {
+					out.push(path.join("")+out1[i].trim());	
+				}
+			}
+			if (out.length>=opts.max) break;
+		}
+	}
+	return out;
+}
+/* get posting from group unit
+  group unit may have 3 cases,
+  1) pure tag <p>
+  2) tag with attribute p[n] match <p n="1"> , <p n="2"> but not <p> or <p id="x">
+  3) tag with a given value, e.g div[type=sutta]
+*/
+var loadGroupPosting=function(groupunit){
+	var gu=this.parseSelector(groupunit);
+	var guposting=this.customfunc.getTagPosting.apply(this,[gu.tag]);
+	if (gu.key) { //no value only attribute
+		var newguposting=[];
+		var attrs=this.customfunc.getTagAttrs.apply(this,[gu.tag,gu.key]);	
+		for (var i in attrs) {
+			newguposting.push(guposting[i]);
+		}
+		guposting=newguposting;
+	} else if (gu.value) {
+		var newguposting=[];
+		var par=['tags',gu.tag,gu.attribute+'='].concat(gu.value.split('.'));
+		var ntag=this.get(par,true);
+		if (typeof ntag=='number') {
+			newguposting.push(guposting[ntag]);
+		} else {
+			for (var i=0;i<ntag.length;i++)	{
+				newguposting.push(guposting[ntag[i]]);
+			}
+		}
+		guposting=newguposting;
+	}
+	return guposting;
+}
+var simplifiedToken=function(token) {
+	return token.toLowerCase();
 }
 module.exports={
 	getText:getText,
@@ -185,8 +292,12 @@ module.exports={
 	token2tree:token2tree,
 	getTagPosting:getTagPosting,
 	isSpaceChar:isSpaceChar,
+	isSearchableChar:isSearchableChar,
 	isCJK:isCJK,
 	normalizeToken:normalizeToken,
+	loadGroupPosting:loadGroupPosting,
+	expandToken:expandToken,
+	simplifiedToken:simplifiedToken,
 
 	//getCrlf:getCrlf,
 	//getCrlfByRange:getCrlfByRange,

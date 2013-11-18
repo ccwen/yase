@@ -82,7 +82,7 @@ var expandToken=function(token,opts) {
 
 	if (opts.count) {
 		for (var i=0;i<keys.length;i++) {
-			var postings=this.getPostingById(keys[i]);
+			var postings=this.getPosting(keys[i]);
 			if (postings) count.push(postings.length);
 			else count.push(0)			
 		}
@@ -103,7 +103,7 @@ var loadtoken=function(token) {
 		token=token.substring(0,token.length-1);
 	}
 	if (lastchar=='^') { //do not expand if ends with ^
-		return {posting:this.getPostingById(token),op:op};
+		return {posting:this.getPosting(token),op:op};
 	}
 	if (lastchar=='!') {
 		op='andnot';
@@ -121,16 +121,16 @@ var loadtoken=function(token) {
 	if (expandtokens){
 		tokens=expandtokens.raw;
 		if (tokens.length==1) {
-			posting=this.getPostingById(tokens[0]);	
+			posting=this.getPosting(tokens[0]);	
 		} else {
 			var postings=[];
 			for (var i in tokens) {
-				postings.push(this.getPostingById(tokens[i]));
+				postings.push(this.getPosting(tokens[i]));
 			}
 			posting=plist.combine(postings);
 		}
 	} else {
-		posting=this.getPostingById(t);	
+		posting=this.getPosting(t);	
 	}	
 	return {posting:posting,op:op};
 }

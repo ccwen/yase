@@ -256,10 +256,67 @@ var plphrase = function (postings,ops) {
   
   return r;
 }
+//return an array of group having any of pl item
+var matchPosting=function(pl,gupl) {
+  var count=0, i = j= 0,  result = [];
+  var docs=[], freq=[];
+  while( i < pl.length && j < gupl.length ){
+     if (pl[i] < gupl[j] ){ 
+       count++;
+       i++; 
+     } else {
+       if (count) {
+        docs.push(j);
+        freq.push(count);
+       }
+       j++;
+       count=0;
+     }
+  }
+  if (count && j<gupl.length) {
+    docs.push(j);
+    freq.push(count);
+    count=0;
+  }
+  else {
+    while (j==gupl.length && i<pl.length && pl[i] >= gupl[gupl.length-1]) {
+      i++;
+      count++;
+    }
+    docs.push(j);
+    freq.push(count);
+  } 
+  return {docs:docs,freq:freq};
+}
+//return an array of slot having any of pl item
+var matchSlot=function(pl,slotshift) {
+  slotshift = slotshift || 16 ;
+  var g = Math.pow(2,slotshift);
+  var groups=pl.map(function(v) {return Math.floor(v / g)});
+  var docs=unique(groups);
+  var freq=[];
+  var last=groups[0],count=1;
+  for (var i=1;i<groups.length;i++) {
+    if (groups[i]>last) {
+      freq.push(count);
+      last=i;
+      count=1;
+    } else {
+      count++;
+    }
+  }
+  freq.push(count);
+  //TODO term freq
+  return {docs:docs,freq:freq} ;
+}
+
 var plist={};
 plist.unpack=unpack;
 plist.plphrase=plphrase;
 plist.plhead=plhead;
+
+plist.matchPosting=matchPosting;
+plist.matchSlot=matchSlot;
 
 plist.groupbyslot=groupbyslot;
 plist.groupbyblock2=groupbyblock2;
