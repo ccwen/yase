@@ -245,6 +245,7 @@ var save=function(filename,opts) {
 	ydb.stringEncoding(strencoding);
 	//console.log(this.output.texts)
 	if (debug) console.time('save file');
+	
 	if (this.customfunc.postings2tree) {
 		console.log('performing postings2tree');
 		this.output.postings=this.customfunc.postings2tree.apply(this,[this.output.postings]);

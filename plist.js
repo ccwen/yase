@@ -174,24 +174,16 @@ var plhead=function(pl, pltag, opts) {
   return out;
 }
 var plfollow2 = function (pl1, pl2, mindis, maxdis) {
-  var r = [];
+  var r = [],i=0;
   var swap = 0;
   
-  if (pl1.length > pl2.length) { //swap for faster compare
-    var t = pl2;
-    pl2 = pl1;
-    pl1 = t;
-    swap = true;
-    mindis = -mindis;
-    maxdis = -maxdis;
-  }
-  for (var i = 0; i < pl1.length; i++) {
+  while (i<pl1.length){
     var k = sortedIndex(pl2, pl1[i] + mindis);
     var t = (pl2[k] >= (pl1[i] +mindis) && pl2[k]<=(pl1[i]+maxdis)) ? k : -1;
     if (t > -1) {
-      if (swap) r.push(pl2[k]);
-      else r.push(pl1[i]);
-    }
+      r.push(pl1[i]);
+      while(pl1[i]<pl2[k] && i<pl1.length) i++;
+    } else i++;
   }
   return r;
 }

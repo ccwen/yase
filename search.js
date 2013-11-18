@@ -204,25 +204,27 @@ var loadTerm=function(token,opts) {
 }
 
 var isWildcard=function(raw) {
-	return !!raw.match(/[\*,\?]/);
+	return !!raw.match(/[\*\?]/);
 }
 var parseWildcard=function(raw) {
 	var n=parseInt(raw,10) || 1;
 	var qcount=raw.split('?').length-1;
 	var scount=raw.split('*').length-1;
+	var type='';
 	if (qcount) type='?';
 	else if (scount) type='*';
-	return {wildcard:type,  width: n , op:'wildcard'};
+	return {wildcard:type, width: n , op:'wildcard'};
 }
 var parseTerm = function(raw,opts) {
-	var res={raw:raw,tokens:null,term:'',op:''};
+	var res={raw:raw,tokens:[],term:'',op:''};
 	var term=raw;
 	var op=0;
 	var firstchar=term[0];
 	if (firstchar=='-') {
 		term=term.substring(1);
-		res.op='exclude'; //exclude
+		res.exclude=true; //exclude
 	}
+
 	term=this.customfunc.normalizeToken.apply(this,[term]);
 	var lastchar=term[term.length-1];
 	
@@ -232,6 +234,8 @@ var parseTerm = function(raw,opts) {
 	} else if (lastchar=='^') {
 		term=term.substring(0,term.length-1);
 		res.op='exact';
+	} else if (lastchar==',') {
+		term=term.substring(0,term.length-1);
 	}
 	res.term=term;
 	return res;
@@ -244,10 +248,11 @@ var loadTerm=function() {
 		var term=terms[i].term;
 		if (cache[term]) terms[i].posting=cache[term];
 		if (!terms[i].posting && terms[i].op!='wildcard') {
-			if (terms[i].tokens) { //term expands to multiple tokens
+			if (terms[i].tokens && terms[i].tokens.length) { //term expands to multiple tokens
 				var postings=[];
 				for (var j in terms[i].tokens) {
-					postings.push(db.getPosting(terms[i].tokens[j]));
+					var posting=db.getPosting(terms[i].tokens[j]);
+					postings.push(posting);
 				}
 				terms[i].posting=plist.combine(postings);
 			} else { //term == token
@@ -260,13 +265,13 @@ var loadTerm=function() {
 }
 var loadPhrase=function(phrase) {
 	var db=this.db, cache=db.postingcache;
-	if (cache[phrase.normalized]) {
-		phrase.posting=cache[phrase.normalized];
+	if (cache[phrase.raw]) {
+		phrase.posting=cache[phrase.raw];
 		return this;
 	}
 
 	if (phrase.termid.length==1) {
-		cache[phrase.normalized]
+		cache[phrase.raw]
 		 =phrase.posting=this.terms[phrase.termid[0]].posting;
 		return this;
 	}
@@ -277,25 +282,29 @@ var loadPhrase=function(phrase) {
 		if (0 === i) {
 			r = T.posting;
 		} else {
-		    if (T.op=='exclude') {
+		    if (T.exclude) {
 		    	r = plist.plnotfollow(r, T.posting, dis);
 		    } else if (T.op=='wildcard') {
-		    	T=this.terms[phrase.termid[++i]];
-		    	if (T.type=='*') {
+		    	T=this.terms[phrase.termid[i++]];
+		    	var width=T.width;
+		    	var wildcard=T.wildcard;
+		    	T=this.terms[phrase.termid[i]];
+		    	if (wildcard=='*') {
 		    		r = plist.plfollow2(r, T.posting, dis, dis+width);
-		    	} else if (T.type=='?') {
+		    	} else if (wildcard=='?') {
 		    		r = plist.plfollow2(r, T.posting, dis+width,dis+width);
 		    	}
 		    	dis+=(width-1);
 		    }else {
-		    	r = plist.plfollow(r, T.posting, dis);
+		    	if (!T.posting) r=[];
+		    	else r = plist.plfollow(r, T.posting, dis);
 		    }
 		}
 		dis++;
 		i++;
 	  }
 	  phrase.posting=r;
-	  cache[phrase.normalized]=r;
+	  cache[phrase.raw]=r;
 	  return this;
 }
 var load=function() {
@@ -334,15 +343,17 @@ var groupBy=function(gu) {
 	
 	for (var i in terms) {
 		var term=terms[i].term;
+		if (terms[i].wildcard) continue;
 		var termdf=docfreqcache[term];
 		if (!termdf) termdf=docfreqcache[term]={};
 		if (!termdf[this.groupunit]) {
 			termdf[this.groupunit]={doclist:null,termfreq:null};
-			var res=matchfunc.apply(this,[terms[i].posting]);;
-			terms[i].freq=res.freq;
-			terms[i].docs=res.docs;
-			termdf[this.groupunit]={doclist:terms[i].docs,termfreq:terms[i].freq};
 		}
+		if (!terms[i].posting) continue;
+		var res=matchfunc.apply(this,[terms[i].posting]);;
+		terms[i].freq=res.freq;
+		terms[i].docs=res.docs;
+		termdf[this.groupunit]={doclist:terms[i].docs,termfreq:terms[i].freq};
 	}
 
 	for (var i in phrases) {
@@ -351,28 +362,51 @@ var groupBy=function(gu) {
 	return this;
 }
 var newPhrase=function() {
-	return {termid:[],posting:[],normalized:''};
+	return {termid:[],posting:[],raw:''};
+}
+var isOrTerm=function(term) {
+	term=term.trim();
+	return (term[term.length-1]===',');
+}
+var orTerms=function(tokens,now) {
+	var raw=tokens[now];
+	var term=parseTerm.apply(this,[raw]);
+	term.tokens.push(term.term);
+	while (isOrTerm(raw))  {
+		raw=tokens[++now];
+		var term2=parseTerm.apply(this,[raw]);
+		term2.tokens.push(term2.term);
+		term.tokens=term.tokens.concat(term2.tokens);
+		term.term+=','+term2.term;
+		term.raw+=term2.raw;
+	} ;
+	return term;
 }
 var newQuery =function(query,opts) {
+
 	var phrases=taghandlers.splitSlot.apply(this,[query]);
 	var phrase_terms=[];
 	var terms=[],variants=[],termcount=0;
-	for (var i=0;i<phrases.length;i++) {
+
+	for  (var i in phrases) {
 		var tokens=this.customfunc.tokenize.apply(this,[phrases[i]]);
 		phrase_terms.push(newPhrase());
-		var normalized=[];
-		for (var j in tokens) {
+		var j=0;
+		while (j<tokens.length) {
 			var raw=tokens[j];
 			if (isWildcard(raw)) {
 				terms.push(parseWildcard.apply(this,[raw]));
+			} else if (isOrTerm(raw)){
+				var term=orTerms.apply(this,[tokens,j]);
+				terms.push(term);
+				j+=term.term.split(',').length-1;
 			} else {
 				terms.push(parseTerm.apply(this,[raw]));
-				normalized.push(this.customfunc.normalizeToken.apply(this,[tokens[j]]));
-				phrase_terms[i].termid.push(termcount++);
 			}
+			phrase_terms[i].termid.push(termcount++);
+			j++;
 		}
-		phrase_terms[i].normalized=normalized.join(' ');
-		console.log('normalized',phrase_terms[i].normalized)
+		phrase_terms[i].raw=phrases[i];
 	}
 	return {
 		db:this,query:query,phrases:phrase_terms,terms:terms,

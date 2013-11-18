@@ -20,32 +20,42 @@ QUnit.test("newQuery 1",function() {
   equal(res.terms[1].term,"a2");
   equal(res.terms[2].term,"b2");
   equal(res.terms[3].term,"b3");
-  equal(res.terms[3].op,"exclude");
+  equal(res.terms[3].exclude,true);
 
 });
 
-var query2="e%.b2 b3.a1";
+var query2="e%.b5 b6.a1";
 QUnit.test("newQuery 2",function() {
   var res=search.newQuery.apply(db,[query2]);
   deepEqual(res.phrases[0].termid,[0]);
   deepEqual(res.phrases[1].termid,[1,2]);
   equal(res.terms[0].term,"e%");
-  equal(res.terms[1].term,"b2");
-  equal(res.terms[2].term,"b3");
+  equal(res.terms[1].term,"b5");
+  equal(res.terms[2].term,"b6");
   deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
-  deepEqual(res.terms[1].tokens,null);
+  deepEqual(res.terms[1].tokens,[]);
 
   
 });
 
-var query3="a1 12? b2";
+var query3="a1 2* a3";
 QUnit.test("newQuery 3",function() {
   var res=search.newQuery.apply(db,[query3]);
-  equal(1,1)
   
+  equal(res.terms.length,3);
+  equal(res.terms[1].width,2);
+  equal(res.terms[1].wildcard,'*');
+  deepEqual(res.phrases[0].termid,[0,1,2]);
+
+});
+var query4="a3 a4,b4,c4";
+QUnit.test("newQuery 4",function() {
+  var res=search.newQuery.apply(db,[query4]);
+  equal(res.terms[0].term,"a3");
+  deepEqual(res.terms[1].tokens,["a4","b4","c4"]);
 });
 
-QUnit.test("load and group",function() {
+QUnit.test("load and group query2",function() {
   var Q=search.newQuery.apply(db,[query2]);
   Q.load().groupBy('p');
 
@@ -56,11 +66,22 @@ QUnit.test("load and group",function() {
   deepEqual(Q.terms[3].docs,[0,1,4]);
   deepEqual(Q.terms[3].freq,[1,2,1]);
   
-
-  deepEqual(Q.phrases[1].posting,[66]);
-
+  deepEqual(Q.phrases[1].posting,[71]);
 });
 
+
+QUnit.test("a dog",function() {
+  var Q=search.newQuery.apply(db,["a 2* dog"]);
+  Q.load();
+  Q.groupBy('p');
+  deepEqual(Q.phrases[0].posting,[137,201,289]);
+
+  var Q2=search.newQuery.apply(db,["a * dog"]);
+  Q2.load();
+  Q2.groupBy('p');
+  deepEqual(Q2.phrases[0].posting,[137,289]);
+
+});
 //QUnit.test("boolean search ",function(){});
 /*
 QUnit.test( "loadterm", function() {
