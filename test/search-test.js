@@ -1,9 +1,9 @@
 console.log(process.cwd())
 var Yase=require('yase');
-var plist=require('../plist');
+var plist=Yase.plist;
+var search=Yase.search;
 
-var db=Yase.use('./searchdb.ydb');
-search=require('../search');
+var db=Yase.use('search-test-db.ydb');
 var query1="a1 a2.b2 -b3";
 
 QUnit.test("match slot",function() {
