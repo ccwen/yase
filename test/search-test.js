@@ -72,16 +72,27 @@ QUnit.test("load and group query2",function() {
 
 QUnit.test("a dog",function() {
   var Q=search.newQuery.apply(db,["a 2* dog"]);
-  Q.load();
-  Q.groupBy('p');
+  Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[137,201,289]);
 
-  var Q2=search.newQuery.apply(db,["a * dog"]);
-  Q2.load();
-  Q2.groupBy('p');
-  deepEqual(Q2.phrases[0].posting,[137,289]);
+  var Q=search.newQuery.apply(db,["a * dog"]);
+  Q.load().groupBy('p');
+  deepEqual(Q.phrases[0].posting,[137,289]); // a dog , a happy dog
 
+  var Q=search.newQuery.apply(db,["a ? dog"]);
+  Q.load().groupBy('p');
+  deepEqual(Q.phrases[0].posting,[289]);  // a happy dog 
+
+  var Q=search.newQuery.apply(db,["a 2? dog"]);
+  Q.load().groupBy('p');
+  deepEqual(Q.phrases[0].posting,[201]);  //a brown happy dog
 });
+
+//TODO Boolean search
+
+
+
+
 //QUnit.test("boolean search ",function(){});
 /*
 QUnit.test( "loadterm", function() {
