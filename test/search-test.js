@@ -14,8 +14,8 @@ QUnit.test("match slot",function() {
 
 QUnit.test("newQuery 1",function() {
   var res=search.newQuery.apply(db,[query1]);
-  deepEqual(res.phrases[0],[0,1]);
-  deepEqual(res.phrases[1],[2,3]);
+  deepEqual(res.phrases[0].termid,[0,1]);
+  deepEqual(res.phrases[1].termid,[2,3]);
   equal(res.terms[0].term,"a1");
   equal(res.terms[1].term,"a2");
   equal(res.terms[2].term,"b2");
@@ -27,21 +27,22 @@ QUnit.test("newQuery 1",function() {
 var query2="e%.b2 b3.a1";
 QUnit.test("newQuery 2",function() {
   var res=search.newQuery.apply(db,[query2]);
-  deepEqual(res.phrases[0],[0]);
-  deepEqual(res.phrases[1],[1,2]);
+  deepEqual(res.phrases[0].termid,[0]);
+  deepEqual(res.phrases[1].termid,[1,2]);
   equal(res.terms[0].term,"e%");
   equal(res.terms[1].term,"b2");
   equal(res.terms[2].term,"b3");
   deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
   deepEqual(res.terms[1].tokens,null);
 
+  
 });
 
 var query3="a1 12? b2";
 QUnit.test("newQuery 3",function() {
   var res=search.newQuery.apply(db,[query3]);
   equal(1,1)
-  console.log(res)
+  
 });
 
 QUnit.test("load and group",function() {
@@ -54,7 +55,9 @@ QUnit.test("load and group",function() {
   deepEqual(Q.terms[1].docs,[1]);
   deepEqual(Q.terms[3].docs,[0,1,4]);
   deepEqual(Q.terms[3].freq,[1,2,1]);
-  //TODO doclist of phrase 
+  
+
+  deepEqual(Q.phrases[1].posting,[66]);
 
 });
 

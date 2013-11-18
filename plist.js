@@ -173,7 +173,30 @@ var plhead=function(pl, pltag, opts) {
   }
   return out;
 }
-var pland = function (pl1, pl2, distance) {
+var plfollow2 = function (pl1, pl2, mindis, maxdis) {
+  var r = [];
+  var swap = 0;
+  
+  if (pl1.length > pl2.length) { //swap for faster compare
+    var t = pl2;
+    pl2 = pl1;
+    pl1 = t;
+    swap = true;
+    mindis = -mindis;
+    maxdis = -maxdis;
+  }
+  for (var i = 0; i < pl1.length; i++) {
+    var k = sortedIndex(pl2, pl1[i] + mindis);
+    var t = (pl2[k] >= (pl1[i] +mindis) && pl2[k]<=(pl1[i]+maxdis)) ? k : -1;
+    if (t > -1) {
+      if (swap) r.push(pl2[k]);
+      else r.push(pl1[i]);
+    }
+  }
+  return r;
+}
+
+var plfollow = function (pl1, pl2, distance) {
   var r = [];
   var swap = 0;
   
@@ -193,7 +216,7 @@ var pland = function (pl1, pl2, distance) {
   }
   return r;
 }
-var plandnot = function (pl1, pl2, distance) {
+var plnotfollow = function (pl1, pl2, distance) {
   var r = [];
   var swap = 0;
   
@@ -247,9 +270,9 @@ var plphrase = function (postings,ops) {
 	  r = postings[0];
 	} else {
     if (ops[i]=='andnot') {
-      r = plandnot(r, postings[i], i);  
+      r = plnotfollow(r, postings[i], i);  
     }else {
-      r = pland(r, postings[i], i);  
+      r = plfollow(r, postings[i], i);  
     }
 	}
   }
@@ -314,6 +337,9 @@ var plist={};
 plist.unpack=unpack;
 plist.plphrase=plphrase;
 plist.plhead=plhead;
+plist.plfollow2=plfollow2;
+plist.plfollow=plfollow;
+plist.plnotfollow=plnotfollow;
 
 plist.matchPosting=matchPosting;
 plist.matchSlot=matchSlot;
