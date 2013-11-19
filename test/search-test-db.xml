@@ -1,20 +1,25 @@
 <xml>
 a1 a2 ā1 a4
-<p n="1">
+<div type="sutra">
+<p>
 a1 a1 a2 a3 a4 a5 a6 a7 a8 a9. a cat
-b1 b2 b2 a3 b4 b5 b6 b7 b8 b9.
+b1 b2 b2 a3 b4 b5 b6 b7 b8 b9. a kitty
 </p>
-<p n="1">
-c1 c2 a3 c4 c5 c6 c7 c8 c9 a dog.
+</div>
+<div type="sutra">
+<p>
+c1 c2 a3 c4 c5 c6 c7 c8 c9 a dog. a happy mouse
 </p>
 <p>
 d1 d2 d3 d4 d5 d6 d7 d8 d9 a brown happy dog.
 </p>
 <p>
-a1 a2 a3 a4 a5 a6 a7 a8 a9.e1 a happy dog
+a1 a2 a3 a4 a5 a6 a7 a8 a9.e1 a happy dog fat cat
 </p>
-<p n="2">
-e1 e2 e3. AA AB AC AD
+</div>
+<div type="sutra">
+<p>
+e1 e2 e3. AA AB AC AD a cow 
 </p>
-
+</div>
 </xml>

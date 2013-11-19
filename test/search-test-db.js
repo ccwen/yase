@@ -3,7 +3,8 @@ console.log(require('yase').build({
 	output:'search-test-db.ydb',
 	author:'yapcheahshen@gmail.com',
 	schema:function() {
-		this.paragraph("p").attr("p","n",{"depth":1,"sparseval":true});
+		this.toctag('div')
+		.paragraph("p").attr("p","n",{"depth":1,"sparseval":true});
 	}
 }));
 

@@ -75,32 +75,12 @@
 
 */
 
-/*
-http://jsfiddle.net/neoswf/aXzWw/
-function intersect_safe(a, b)
-{
-  var ai = bi= 0;
-  var result = [];
-
-  while( ai < a.length && bi < b.length ){
-     if      (a[ai] < b[bi] ){ ai++; }
-     else if (a[ai] > b[bi] ){ bi++; }
-     else
-     {
-       result.push(ai);
-       ai++;
-       bi++;
-     }
-  }
-
-  return result;
-}
-
-*/   
+ 
 
 var plist=require('./plist.js');
-//var boolsearch=require('./boolsearch.js');
+var boolsearch=require('./boolsearch.js');
 var taghandlers=require('./taghandlers.js');
+var STRATEGY={"boolean":boolsearch};
 
 /* load similar token with same prefix or simplified (dediacritic )*/
 var getTermVariants=function(term,opts) {
@@ -237,7 +217,7 @@ var parseTerm = function(raw,opts) {
 	} else if (lastchar==',') {
 		term=term.substring(0,term.length-1);
 	}
-	res.term=term;
+	res.key=term;
 	return res;
 }
 var loadTerm=function() {
@@ -245,8 +225,8 @@ var loadTerm=function() {
 	var db=this.db, cache=db.postingcache;
 	var terms=this.terms;
 	for (var i in this.terms) {
-		var term=terms[i].term;
-		if (cache[term]) terms[i].posting=cache[term];
+		var key=terms[i].key;
+		if (cache[key]) terms[i].posting=cache[key];
 		if (!terms[i].posting && terms[i].op!='wildcard') {
 			if (terms[i].tokens && terms[i].tokens.length) { //term expands to multiple tokens
 				var postings=[];
@@ -256,22 +236,22 @@ var loadTerm=function() {
 				}
 				terms[i].posting=plist.combine(postings);
 			} else { //term == token
-				terms[i].posting=db.getPosting(term);
+				terms[i].posting=db.getPosting(key);
 			}
-			cache[term]=terms[i].posting;
+			cache[key]=terms[i].posting;
 		}
 	}
 
 }
 var loadPhrase=function(phrase) {
 	var db=this.db, cache=db.postingcache;
-	if (cache[phrase.raw]) {
-		phrase.posting=cache[phrase.raw];
+	if (cache[phrase.key]) {
+		phrase.posting=cache[phrase.key];
 		return this;
 	}
 
 	if (phrase.termid.length==1) {
-		cache[phrase.raw]
+		cache[phrase.key]
 		 =phrase.posting=this.terms[phrase.termid[0]].posting;
 		return this;
 	}
@@ -282,29 +262,29 @@ var loadPhrase=function(phrase) {
 		if (0 === i) {
 			r = T.posting;
 		} else {
-		    if (T.exclude) {
-		    	r = plist.plnotfollow(r, T.posting, dis);
-		    } else if (T.op=='wildcard') {
+		    if (T.op=='wildcard') {
 		    	T=this.terms[phrase.termid[i++]];
 		    	var width=T.width;
 		    	var wildcard=T.wildcard;
 		    	T=this.terms[phrase.termid[i]];
-		    	if (wildcard=='*') {
-		    		r = plist.plfollow2(r, T.posting, dis, dis+width);
-		    	} else if (wildcard=='?') {
-		    		r = plist.plfollow2(r, T.posting, dis+width,dis+width);
-		    	}
+		    	var mindis=dis;
+		    	if (wildcard=='?') mindis=dis+width;
+		    	if (T.exclude) r = plist.plnotfollow2(r, T.posting, mindis, dis+width);
+		    	else r = plist.plfollow2(r, T.posting, mindis, dis+width);		    	
 		    	dis+=(width-1);
 		    }else {
 		    	if (!T.posting) r=[];
-		    	else r = plist.plfollow(r, T.posting, dis);
+		    	else {
+		    		if (T.exclude) r = plist.plnotfollow(r, T.posting, dis);
+		    		else r = plist.plfollow(r, T.posting, dis);
+		    	}
 		    }
 		}
 		dis++;
 		i++;
 	  }
 	  phrase.posting=r;
-	  cache[phrase.raw]=r;
+	  cache[phrase.key]=r;
 	  return this;
 }
 var load=function() {
@@ -342,22 +322,33 @@ var groupBy=function(gu) {
 	}
 	
 	for (var i in terms) {
-		var term=terms[i].term;
 		if (terms[i].wildcard) continue;
-		var termdf=docfreqcache[term];
-		if (!termdf) termdf=docfreqcache[term]={};
-		if (!termdf[this.groupunit]) {
-			termdf[this.groupunit]={doclist:null,termfreq:null};
+
+		var key=terms[i].key;
+		var docfreq=docfreqcache[key];
+		if (!docfreq) docfreq=docfreqcache[key]={};
+		if (!docfreq[this.groupunit]) {
+			docfreq[this.groupunit]={doclist:null,freq:null};
 		}
 		if (!terms[i].posting) continue;
 		var res=matchfunc.apply(this,[terms[i].posting]);;
 		terms[i].freq=res.freq;
 		terms[i].docs=res.docs;
-		termdf[this.groupunit]={doclist:terms[i].docs,termfreq:terms[i].freq};
+		docfreq[this.groupunit]={doclist:terms[i].docs,freq:terms[i].freq};
 	}
 
 	for (var i in phrases) {
-		//
+		var key=phrases[i].key;
+		var docfreq=docfreqcache[key];
+		if (!docfreq) docfreq=docfreqcache[key]={};
+		if (!docfreq[this.groupunit]) {
+			docfreq[this.groupunit]={doclist:null,freq:null};
+		}		
+		if (!phrases[i].posting) continue;
+		var res=matchfunc.apply(this,[phrases[i].posting]);;
+		phrases[i].freq=res.freq;
+		phrases[i].docs=res.docs;
+		docfreq[this.groupunit]={doclist:phrases[i].docs,freq:phrases[i].freq};
 	}
 	return this;
 }
@@ -371,17 +362,23 @@ var isOrTerm=function(term) {
 var orTerms=function(tokens,now) {
 	var raw=tokens[now];
 	var term=parseTerm.apply(this,[raw]);
-	term.tokens.push(term.term);
+	term.tokens.push(term.key);
 	while (isOrTerm(raw))  {
 		raw=tokens[++now];
 		var term2=parseTerm.apply(this,[raw]);
-		term2.tokens.push(term2.term);
+		term2.tokens.push(term2.key);
 		term.tokens=term.tokens.concat(term2.tokens);
-		term.term+=','+term2.term;
-		term.raw+=term2.raw;
+		term.key+=','+term2.key;
 	} ;
 	return term;
 }
+var search=function(opts) {
+	opts=opts||{};
+	var type=opts.strategy||this.strategy||"boolean";
+	var strategy=STRATEGY[type];
+	return strategy.search.apply(this,[opts]);
+}
+
 var newQuery =function(query,opts) {
 
 	var phrases=taghandlers.splitSlot.apply(this,[query]);
@@ -406,12 +403,13 @@ var newQuery =function(query,opts) {
 			phrase_terms[i].termid.push(termcount++);
 			j++;
 		}
-		phrase_terms[i].raw=phrases[i];
+		phrase_terms[i].key=phrases[i];
 	}
 	return {
 		db:this,query:query,phrases:phrase_terms,terms:terms,
 		groupunit:'',
 		load:load,groupBy:groupBy,
+		search:search,
 	};
 }
 module.exports={

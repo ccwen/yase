@@ -12,14 +12,18 @@ QUnit.test("match slot",function() {
   deepEqual(r.freq,[3,3,2]);
 });
 
+/*TODO
+  skip leading and ending wildcard
+*/
+
 QUnit.test("newQuery 1",function() {
   var res=search.newQuery.apply(db,[query1]);
   deepEqual(res.phrases[0].termid,[0,1]);
   deepEqual(res.phrases[1].termid,[2,3]);
-  equal(res.terms[0].term,"a1");
-  equal(res.terms[1].term,"a2");
-  equal(res.terms[2].term,"b2");
-  equal(res.terms[3].term,"b3");
+  equal(res.terms[0].key,"a1");
+  equal(res.terms[1].key,"a2");
+  equal(res.terms[2].key,"b2");
+  equal(res.terms[3].key,"b3");
   equal(res.terms[3].exclude,true);
 
 });
@@ -29,9 +33,9 @@ QUnit.test("newQuery 2",function() {
   var res=search.newQuery.apply(db,[query2]);
   deepEqual(res.phrases[0].termid,[0]);
   deepEqual(res.phrases[1].termid,[1,2]);
-  equal(res.terms[0].term,"e%");
-  equal(res.terms[1].term,"b5");
-  equal(res.terms[2].term,"b6");
+  equal(res.terms[0].key,"e%");
+  equal(res.terms[1].key,"b5");
+  equal(res.terms[2].key,"b6");
   deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
   deepEqual(res.terms[1].tokens,[]);
 
@@ -51,49 +55,71 @@ QUnit.test("newQuery 3",function() {
 var query4="a3 a4,b4,c4";
 QUnit.test("newQuery 4",function() {
   var res=search.newQuery.apply(db,[query4]);
-  equal(res.terms[0].term,"a3");
+  equal(res.terms[0].key,"a3");
   deepEqual(res.terms[1].tokens,["a4","b4","c4"]);
 });
 
 QUnit.test("load and group query2",function() {
   var Q=search.newQuery.apply(db,[query2]);
   Q.load().groupBy('p');
-
-  deepEqual(Q.terms[0].posting,[288,320,321,322]);
+  n=480;
+  deepEqual(Q.terms[0].posting,[384,n,n+1,n+2]);
   deepEqual(Q.terms[0].docs,[4,5]);
 
   deepEqual(Q.terms[1].docs,[1]);
   deepEqual(Q.terms[3].docs,[0,1,4]);
   deepEqual(Q.terms[3].freq,[1,2,1]);
   
-  deepEqual(Q.phrases[1].posting,[71]);
+  deepEqual(Q.phrases[1].posting,[103]);
 });
 
 
 QUnit.test("a dog",function() {
+
   var Q=search.newQuery.apply(db,["a 2* dog"]);
   Q.load().groupBy('p');
-  deepEqual(Q.phrases[0].posting,[137,201,289]);
+  deepEqual(Q.phrases[0].posting,[233,297,385]);
 
   var Q=search.newQuery.apply(db,["a * dog"]);
   Q.load().groupBy('p');
-  deepEqual(Q.phrases[0].posting,[137,289]); // a dog , a happy dog
+  deepEqual(Q.phrases[0].posting,[233,385]); // a dog , a happy dog
 
   var Q=search.newQuery.apply(db,["a ? dog"]);
   Q.load().groupBy('p');
-  deepEqual(Q.phrases[0].posting,[289]);  // a happy dog 
+  deepEqual(Q.phrases[0].posting,[385]);  // a happy dog 
 
   var Q=search.newQuery.apply(db,["a 2? dog"]);
   Q.load().groupBy('p');
-  deepEqual(Q.phrases[0].posting,[201]);  //a brown happy dog
+  deepEqual(Q.phrases[0].posting,[297]);  //a brown happy dog
+
+
+  var Q=search.newQuery.apply(db,["a -dog"]);
+  Q.load().groupBy('p');
+  deepEqual(Q.phrases[0].posting,[96,128,256,297,385,516]);  //cat kitty brown happy cow
+
+  var Q=search.newQuery.apply(db,["a 2* -dog"]);
+  Q.load().groupBy('p');
+  deepEqual(Q.phrases[0].posting,[96,128,256,516]);  //cat kitty mouse cow
+
 });
 
 //TODO Boolean search
 
+QUnit.test("boolean search ",function(){
+  var Q=search.newQuery.apply(db,["cat.kitty"]);
+  Q.load().groupBy('p').search({strategy:'boolean'});
 
+  deepEqual(Q.docs,[1]);
 
+  var Q=search.newQuery.apply(db,["cat.cow"]);
+  Q.load().groupBy('p').search({strategy:'boolean',op:'union'});
 
-//QUnit.test("boolean search ",function(){});
+  deepEqual(Q.docs,[1,4,5]);
+
+  var Q=search.newQuery.apply(db,["mouse.cat.happy"]);
+  Q.load().groupBy('p').search({strategy:'boolean',op:['union','intersect']});  
+  deepEqual(Q.docs,[2,4]);  
+});
 /*
 QUnit.test( "loadterm", function() {
   var res=search.loadTerm.apply(db,["a"]);

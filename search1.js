@@ -1,5 +1,5 @@
 var plist=require('./plist.js');
-var boolsearch=require('./boolsearch.js');
+var boolsearch=require('./boolsearch1.js');
 var expandKeys=function(fullpath,path,opts) {
 	var out=[];
 	path=JSON.parse(JSON.stringify(path))
