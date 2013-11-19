@@ -4,7 +4,7 @@ var plist=Yase.plist;
 var search=Yase.search;
 
 var db=Yase.use('search-test-db.ydb');
-var query1="a1 a2.b2 -b3";
+var query1=["a1 a2","b2 -b3"];
 
 QUnit.test("match slot",function() {
   var r=plist.matchSlot([1,2,3,32,33,34,128,129],5);
@@ -28,7 +28,7 @@ QUnit.test("newQuery 1",function() {
 
 });
 
-var query2="e%.b5 b6.a1";
+var query2=["e%","b5 b6","a1"];
 QUnit.test("newQuery 2",function() {
   var res=search.newQuery.apply(db,[query2]);
   deepEqual(res.phrases[0].termid,[0]);
@@ -106,17 +106,17 @@ QUnit.test("a dog",function() {
 //TODO Boolean search
 
 QUnit.test("boolean search ",function(){
-  var Q=search.newQuery.apply(db,["cat.kitty"]);
+  var Q=search.newQuery.apply(db,[["cat","kitty"]]);
   Q.load().groupBy('p').search({strategy:'boolean'});
 
   deepEqual(Q.docs,[1]);
 
-  var Q=search.newQuery.apply(db,["cat.cow"]);
+  var Q=search.newQuery.apply(db,[["cat","cow"]]);
   Q.load().groupBy('p').search({strategy:'boolean',op:'union'});
 
   deepEqual(Q.docs,[1,4,5]);
 
-  var Q=search.newQuery.apply(db,["mouse.cat.happy"]);
+  var Q=search.newQuery.apply(db,[["mouse","cat","happy"]]);
   Q.load().groupBy('p').search({strategy:'boolean',op:['union','intersect']});  
   deepEqual(Q.docs,[2,4]);  
 });

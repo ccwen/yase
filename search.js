@@ -381,7 +381,9 @@ var search=function(opts) {
 
 var newQuery =function(query,opts) {
 
-	var phrases=taghandlers.splitSlot.apply(this,[query]);
+	var phrases=query;
+	if (typeof query=='string') phrases=[query];
+	
 	var phrase_terms=[];
 	var terms=[],variants=[],termcount=0;
 
