@@ -5,6 +5,7 @@
 */
 
 // http://jsfiddle.net/neoswf/aXzWw/
+var plist=require('./plist');
 function intersect(I, J) {
   var i = j = 0;
   var result = [];
@@ -21,6 +22,8 @@ function intersect(I, J) {
 }
 
 var union=function(a,b) {
+	if (!a || !a.length) return b;
+	if (!b || !b.length) return a;
     var result = [];
     var ai = 0;
     var bi = 0;
@@ -63,7 +66,7 @@ var boolSearch=function(opts) {
 		else op=opts.op;
 		r=OPERATION[op](r,this.phrases[i].docs);
 	}
-	this.docs=r;
+	this.docs=plist.unique(r);
 	return this;
 }
 module.exports={search:boolSearch}

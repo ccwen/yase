@@ -80,7 +80,8 @@
 var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
 var taghandlers=require('./taghandlers.js');
-var STRATEGY={"boolean":boolsearch};
+
+var rankvsm=require('./rankvsm');
 
 /* load similar token with same prefix or simplified (dediacritic )*/
 var getTermVariants=function(term,opts) {
@@ -303,7 +304,7 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting);
 }
 var groupBy=function(gu) {
-	gu=gu||'';
+	gu=gu||this.opts.groupunit||'';
 	if (!this.loaded) this.load();
 
 	var db=this.db,terms=this.terms,phrases=this.phrases;
@@ -316,11 +317,9 @@ var groupBy=function(gu) {
 			this.groupposting=groupcache[gu]
 			 =db.customfunc.loadGroupPosting.apply(db,[gu]);	
 		}
-		
 		matchfunc=matchPosting;
-		this.groupunit=gu;
 	}
-	
+	this.groupunit=gu;
 	for (var i in terms) {
 		if (terms[i].wildcard) continue;
 
@@ -350,6 +349,7 @@ var groupBy=function(gu) {
 		phrases[i].docs=res.docs;
 		docfreq[this.groupunit]={doclist:phrases[i].docs,freq:phrases[i].freq};
 	}
+	this.grouped=true;
 	return this;
 }
 var newPhrase=function() {
@@ -372,14 +372,41 @@ var orTerms=function(tokens,now) {
 	} ;
 	return term;
 }
-var search=function(opts) {
-	opts=opts||{};
-	var type=opts.strategy||this.strategy||"boolean";
-	var strategy=STRATEGY[type];
-	return strategy.search.apply(this,[opts]);
+
+var trim=function(start,end) {
+	if (!this.grouped) groupBy.apply(this);
+
+	if (!this.posting || !this.posting.length)return this;
+	if (start==0 && end==-1) {
+		this.trimmed=true;
+		return;
+	}
+	start=start||this.opts.start;
+	this.opts.start=start;
+	end=end||this.opts.end;
+	this.opts.end=end;	
+	this.posting=plist.trim(this.posting,start,end);
+	this.trimmed=true;
+	return this;
 }
+var RANK={'vsm':rankvsm};
+var search=function(opts) {
+	if (!this.trimmed) trim.apply(this);
+	for (var i in opts) this.opts[i]=opts[i];
+	
+	boolsearch.search.apply(this,[this.opts]);
+	if (this.opts.rank ){
+		var rankmodel=RANK[this.opts.rank];
+		if (rankmodel) rankmodel.rank.apply(this);
+	}
+	return this;
+}
+// sequance : load.groupBy.trim.search.rank.highlight
 
 var newQuery =function(query,opts) {
+	opts=opts||{};
+	opts.start=opts.start||0;
+	opts.end=opts.end||-1;
 
 	var phrases=query;
 	if (typeof query=='string') phrases=[query];
@@ -412,6 +439,8 @@ var newQuery =function(query,opts) {
 		groupunit:'',
 		load:load,groupBy:groupBy,
 		search:search,
+		trim:trim,
+		opts:opts
 	};
 }
 module.exports={

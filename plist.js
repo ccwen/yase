@@ -360,7 +360,11 @@ var matchSlot=function(pl,slotshift) {
   //TODO term freq
   return {docs:docs,freq:freq} ;
 }
-
+var trim=function(arr,start,end) {
+  var s=sortedIndex(arr,start);
+  var e=sortedIndex(arr,end);
+  return arr.slice(s,e+1);
+}
 var plist={};
 plist.unpack=unpack;
 plist.plphrase=plphrase;
@@ -369,9 +373,11 @@ plist.plfollow2=plfollow2;
 plist.plnotfollow2=plnotfollow2;
 plist.plfollow=plfollow;
 plist.plnotfollow=plnotfollow;
-
+plist.unique=unique;
+plist.sortedIndex=sortedIndex;
 plist.matchPosting=matchPosting;
 plist.matchSlot=matchSlot;
+plist.trim=trim;
 
 plist.groupbyslot=groupbyslot;
 plist.groupbyblock2=groupbyblock2;

@@ -107,19 +107,38 @@ QUnit.test("a dog",function() {
 
 QUnit.test("boolean search ",function(){
   var Q=search.newQuery.apply(db,[["cat","kitty"]]);
-  Q.load().groupBy('p').search({strategy:'boolean'});
+  Q.load().groupBy('p').search();
 
-  deepEqual(Q.docs,[1]);
+  deepEqual(Q.docs,[1,10]);
 
   var Q=search.newQuery.apply(db,[["cat","cow"]]);
-  Q.load().groupBy('p').search({strategy:'boolean',op:'union'});
+  Q.load().groupBy('p').search({op:'union'});
 
-  deepEqual(Q.docs,[1,4,5]);
+  deepEqual(Q.docs,[1,4,5,6,7,8,9,10]);
 
   var Q=search.newQuery.apply(db,[["mouse","cat","happy"]]);
-  Q.load().groupBy('p').search({strategy:'boolean',op:['union','intersect']});  
+  Q.load().groupBy('p').search({op:['union','intersect']});  
   deepEqual(Q.docs,[2,4]);  
 });
+
+QUnit.test("trim posting",function() {
+  pl=[11,22,33,44,55,66,77,88,99,100];
+  deepEqual( plist.trim(pl,33,66) , [33,44,55,66]);
+});
+
+QUnit.test("vsm",function() {
+ var Q=search.newQuery.apply(db,[["fish","dog","cat"],
+  {op:'union',groupunit:'p',rank:'vsm'}]);
+ Q.search();
+ var last=8;
+ equal(Q.score[last]>=1,true); //last one is the highest
+ deepEqual(Q.score[last-1]==Q.score[last-2],true);//same query same score
+ deepEqual(Q.score[last-3]<Q.score[last-2],true); //rare term "fish" has higher rank
+ console.log(Q.score) 
+ 
+
+});
+
 /*
 QUnit.test( "loadterm", function() {
   var res=search.loadTerm.apply(db,["a"]);
