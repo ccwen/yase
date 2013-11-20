@@ -1,59 +1,47 @@
-/*Rank by Vector Space Model*/
+/*Rank by Vector Space Model http://en.wikipedia.org/wiki/Vector_space_model 
+  TODO , remove common terms , T.docs.length > this.docs.length*0.5 
+*/
 
 var plist=require('./plist');
-var tf=function(nterm,ndoc) {
-	if (ndoc==-1) return 1;
+var termFrequency=function(nterm,ndoc) {
+	if (ndoc==-1) return 1; //the query
 	var T=this.terms[nterm];
-	var k=plist.sortedIndex(T.docs,ndoc);
-	if (k>-1 && T.docs[k]==ndoc) {
-		return Math.log(T.freq[k]+1);
-	} else return 0;
+	var i=plist.sortedIndex(T.docs,ndoc);
+	if (T.docs[i]===ndoc) return Math.log(T.freq[i]+1);
+	else return 0;
 	
 }
-var idf2=function() {
-	for (var i=0;i<this.terms.length;i++) { //所有的關鍵字
+var calulateTermsIDFxIDF=function() {
+	if (this.IDFready) return;
+	for (var i=0;i<this.terms.length;i++) {
 		var T=this.terms[i];
 		var idf = Math.log( this.docs.length / T.docs.length );
 		T.idf2=idf*idf;
-	}	
+	}
+	this.IDFready=true;
 }
-
-var norm=function(d) {
-	var res = 0;
+var cosineSimilarity = function (d1, d2) {
+	var innerproduct = 0, norm1=0,norm2=0;
 	for (var i=0;i<this.terms.length;i++) {
 		var T=this.terms[i];
-		var termfreq=tf.apply(this,[i,d]);
-		res += termfreq* termfreq * T.idf2;
-	}
-	return Math.sqrt(res);
-}
-var innerproduct = function (d1, d2) {
-	var res = 0;
-	for (var i=0;i<this.terms.length;i++) {
-		var T=this.terms[i];
-		var tf_d1=tf.apply(this,[i,d1]);
-		var tf_d2=tf.apply(this,[i,d2]);
-		res += tf_d1*tf_d2*T.idf2;
-	}
-	return res;
-}
+		var tf_d1=termFrequency.apply(this,[i,d1]);
+		var tf_d2=termFrequency.apply(this,[i,d2]);
 
-var cosinesim = function (d1, d2) {
-	var ip = innerproduct.apply(this,[d1, d2]);
-	var norm1 = norm.apply(this,[d1]);
-	var norm2 = norm.apply(this,[d2]);
-	return ip / (norm1 * norm2);
+		innerproduct += tf_d1*tf_d2*T.idf2;
+		norm1 += tf_d1*tf_d1*T.idf2;
+		norm2 += tf_d2*tf_d2*T.idf2;
+	}
+	return innerproduct / Math.sqrt(norm1 * norm2);
 }
 
 var vsm=function(){
-	idf2.apply(this);
+	calulateTermsIDFxIDF.apply(this);
 	this.score=[];
 	for (var i=0;i<this.docs.length;i++) {
-		doc=this.docs[i];
-		var sim=cosinesim.apply(this, [doc, -1]);
+		var doc=this.docs[i];
+		var sim=cosineSimilarity.apply(this, [doc, -1]);
 		this.score.push(sim);
 	}
 }
-
 
 module.exports={rank:vsm};

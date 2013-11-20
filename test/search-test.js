@@ -128,13 +128,14 @@ QUnit.test("trim posting",function() {
 
 QUnit.test("vsm",function() {
  var Q=search.newQuery.apply(db,[["fish","dog","cat"],
-  {op:'union',groupunit:'p',rank:'vsm'}]);
+  {groupunit:'p',rank:'vsm'}]);
  Q.search();
  var last=8;
  equal(Q.score[last]>=1,true); //last one is the highest
  deepEqual(Q.score[last-1]==Q.score[last-2],true);//same query same score
  deepEqual(Q.score[last-3]<Q.score[last-2],true); //rare term "fish" has higher rank
  console.log(Q.score) 
+ console.log(Q.docs) 
  
 
 });

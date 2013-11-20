@@ -393,11 +393,15 @@ var RANK={'vsm':rankvsm};
 var search=function(opts) {
 	if (!this.trimmed) trim.apply(this);
 	for (var i in opts) this.opts[i]=opts[i];
+	//VSM prefer union
+	if (!this.opts.op && this.opts.rank=='vsm') this.opts.op='union';
 	
 	boolsearch.search.apply(this,[this.opts]);
 	if (this.opts.rank ){
 		var rankmodel=RANK[this.opts.rank];
-		if (rankmodel) rankmodel.rank.apply(this);
+		if (rankmodel) {
+			rankmodel.rank.apply(this);
+		}
 	}
 	return this;
 }
