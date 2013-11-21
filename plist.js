@@ -137,11 +137,11 @@ var sortedIndex = function (array, obj, iterator) { //taken from underscore
   return low;
 };*/
 
-var sortedIndex = function (array, obj) { 
+var indexOfSorted = function (array, obj) { 
   var low = 0,
   high = array.length;
   while (low < high) {
-  var mid = (low + high) >> 1;
+    var mid = (low + high) >> 1;
     array[mid] < obj ? low = mid + 1 : high = mid;
   }
   return low;
@@ -152,7 +152,7 @@ var plhead=function(pl, pltag, opts) {
   var out=[];
   if (pltag.length<pl.length) {
     for (var i=0;i<pltag.length;i++) {
-       k = sortedIndex(pl, pltag[i]);
+       k = indexOfSorted(pl, pltag[i]);
        if (k>-1 && k<pl.length) {
         if (pl[k]==pltag[i]) {
           out.push(pltag[i]);
@@ -162,7 +162,7 @@ var plhead=function(pl, pltag, opts) {
     }
   } else {
     for (var i=0;i<pl.length;i++) {
-       k = sortedIndex(pltag, pl[i]);
+       k = indexOfSorted(pltag, pl[i]);
        if (k>-1 && k<pltag.length) {
         if (pltag[k]==pl[i]) {
           out.push(pltag[k]);
@@ -183,14 +183,14 @@ var plfollow2 = function (pl1, pl2, mindis, maxdis) {
   var swap = 0;
   
   while (i<pl1.length){
-    var k = sortedIndex(pl2, pl1[i] + mindis);
+    var k = indexOfSorted(pl2, pl1[i] + mindis);
     var t = (pl2[k] >= (pl1[i] +mindis) && pl2[k]<=(pl1[i]+maxdis)) ? k : -1;
     if (t > -1) {
       r.push(pl1[i]);
       i++;
     } else {
       if (k>=pl2.length) break;
-      k=sortedIndex (pl1,pl2[k]-maxdis);
+      k=indexOfSorted (pl1,pl2[k]-maxdis);
       if (k>i) i=k;
       else break;
     }
@@ -202,7 +202,7 @@ var plnotfollow2 = function (pl1, pl2, mindis, maxdis) {
   var r = [],i=0;
   
   while (i<pl1.length){
-    var k = sortedIndex(pl2, pl1[i] + mindis);
+    var k = indexOfSorted(pl2, pl1[i] + mindis);
     var t = (pl2[k] >= (pl1[i] +mindis) && pl2[k]<=(pl1[i]+maxdis)) ? k : -1;
     if (t > -1) {
       i++;
@@ -211,7 +211,7 @@ var plnotfollow2 = function (pl1, pl2, mindis, maxdis) {
         r=r.concat(pl1.slice(i));
         break;
       } else {
-        k=sortedIndex (pl1,pl2[k]-maxdis);
+        k=indexOfSorted (pl1,pl2[k]-maxdis);
         if (k>i) {
           r=r.concat(pl1.slice(i,k));
           i=k;
@@ -226,14 +226,14 @@ var plfollow = function (pl1, pl2, distance) {
   var r = [];
 
   for (var i = 0; i < pl1.length; i++) {
-    var k = sortedIndex(pl2, pl1[i] + distance);
+    var k = indexOfSorted(pl2, pl1[i] + distance);
     var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
     if (t > -1) {
       r.push(pl1[i]);
       i++;
     } else {
       if (k>=pl2.length) break;
-      k=sortedIndex (pl1,pl2[k]-maxdis);
+      k=indexOfSorted (pl1,pl2[k]-maxdis);
       if (k>i) i=k;
       else break;
     }
@@ -246,7 +246,7 @@ var plnotfollow = function (pl1, pl2, distance) {
   var swap = 0;
   
   while (i<pl1.length){
-    var k = sortedIndex(pl2, pl1[i] + distance);
+    var k = indexOfSorted(pl2, pl1[i] + distance);
     var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
     if (t > -1) { 
       i++;
@@ -255,7 +255,7 @@ var plnotfollow = function (pl1, pl2, distance) {
         r=r.concat(pl1.slice(i));
         break;
       } else {
-        k=sortedIndex (pl1,pl2[k]-distance);
+        k=indexOfSorted (pl1,pl2[k]-distance);
         if (k>i) {
           r=r.concat(pl1.slice(i,k));
           i=k;
@@ -361,8 +361,8 @@ var matchSlot=function(pl,slotshift) {
   return {docs:docs,freq:freq} ;
 }
 var trim=function(arr,start,end) {
-  var s=sortedIndex(arr,start);
-  var e=sortedIndex(arr,end);
+  var s=indexOfSorted(arr,start);
+  var e=indexOfSorted(arr,end);
   return arr.slice(s,e+1);
 }
 var plist={};
@@ -374,7 +374,7 @@ plist.plnotfollow2=plnotfollow2;
 plist.plfollow=plfollow;
 plist.plnotfollow=plnotfollow;
 plist.unique=unique;
-plist.sortedIndex=sortedIndex;
+plist.indexOfSorted=indexOfSorted;
 plist.matchPosting=matchPosting;
 plist.matchSlot=matchSlot;
 plist.trim=trim;

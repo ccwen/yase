@@ -140,7 +140,7 @@ var highlight=function(opts) {
 	var i=0,j=0,last=0,voff=0,now=0;
 	var output='';
 
-	while (tokens[i][0]=='<') output+=tokens[i++];
+	while (i<tokens.length &&tokens[i][0]=='<') output+=tokens[i++];
 
 	while (i<tokens.length) {
 		if (voff==opts.hits[j]) {

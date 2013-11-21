@@ -1,78 +1,6 @@
 /*
   search rewrite
-
-
-  loadTerm   
-     input  : token with suffix operator
-        rasa^  //for pali ,exact
-        rasa%  //auto expansion (up to 100 words with same prefix)
-
-     output : 
-        list of variants 
-        raw posting (OR all variants postings)
-
-     each token assign a color.
-
-  groupToken    
-     input  : raw posting, group unit (slot, p tag, document , etc)
-     output : 
-        [ [ngroup , postings from group starting voff] ] //array is much faster
-	    
-  Phrase Search  ( group by slot )
-    input : list of token (wild card, fix length , variable length)
-            token delimeter can be space, Tibetan Tsek
-            wild card served as token delimeter
-            12?  //skip 12 token
-            12*  //within 12
-            A?B  //skip 1 token
-            A*B  // AB or A?B
-            A**B // AB or A?B or A??B
-            A*2B // same as above
-            A*  // same as A
-            *A  // same as A
-            
-	find token in same group. (array intersect)
-
- 	pland //only apply pland on possible group ==>save to cache
-
- 	output: 
- 	  {grouped: { ngroup:[array of postings] } , 
- 	   tokenlengths: number | {ngroup:[array of phraselength]} }
-
-    grouped postings are keeped when need to check which nphrase at highlight stage
-    if phrase consist variable length wildcard, phraselength is an object of arrays.
-    otherwise phraselength is a number.
-
-  Boolean Search 
-    input: 
-       grouped postings of phrase search
-       Granularity: slot, sub-paragraph(p) , paragraph (p[n]), readunit
-
-    output: grouped postings of phrases
- 	  {grouped: { ngroup:[array of postings] } , 
- 	   tokenlengths: [array of phraselength] | {ngroup:[array of phraselength]} 
- 	   nphrase: {ngroup:[array of phrase seq]}  }
-
-  Fuzzy Search (sentence similarity match)
-    input:
-      array of phrase ( no operator)
-      Granularity: slot, sub-paragraph(p) , paragraph (p[n]), readunit
-    output: ranked by relevancy
-    plugin for calculate of similarity
-    
-    Document length : groupsize in number of token can be retrieved by grouped posting
-          groupsize n = g[n+1]-g[n]
-
-
-
-  trim (starting and ending voff), for highlight page
-
-  seqcount // must know the total count first
-           //for incremental result listing
-
-  highlight //normally trimmed
-    input: grouped nphrase , grouped tokenlength, nphrase
-
+  SPEC https://docs.google.com/document/d/1CHsr-wnzXdm32xsEt2IY4cneq5AS3zq3dqxeLD3onZU/edit
 */
 
  
@@ -82,6 +10,7 @@ var boolsearch=require('./boolsearch.js');
 var taghandlers=require('./taghandlers.js');
 
 var rankvsm=require('./rankvsm');
+var highlight=require('./highlight');
 
 /* load similar token with same prefix or simplified (dediacritic )*/
 var getTermVariants=function(term,opts) {
@@ -113,77 +42,14 @@ var getTermVariants=function(term,opts) {
 
 }
 
-/*
-  load posting of token and it's variants 
-  token may ends with operator 
-  ^  verbatim no expansion, 
-  %  tokens with same prefix
-  !  not operation  //must be last one
-  ^! exclue verbatim token
-  %! exclude all tokens with same prefix
-*/
-var loadTerm=function(token,opts) {
-	opts=opts||{};
-	var PREFIX='%', VERBATIM='^';
-	var op='and';
-	token=token.trim();
-	if (token.trim()[0]=='<') return false;
 
-	if (lastchar=='!') {
-		op='andnot';
-		token=token.substring(0,token.length-1);
-		lastchar=token[token.length-1];
-	}
-
-	var lastchar=token[token.length-1];
-	if (lastchar==VERBATIM || lastchar==PREFIX) {
-		token=token.substring(0,token.length-1);
-	}
-	if (lastchar==VERBATIM) { //do not expand if ends with ^
-		return {posting:this.getPosting(token),op:op};
-	}
-
-
-	opts.exact=true;
-	if (lastchar==PREFIX) opts.exact=false; //automatic prefix
-	
-	var t=this.customfunc.normalizeToken?
-		this.customfunc.normalizeToken.apply(this,[token]):token;
-	
-	var variants=getTermVariants.apply(this,[ t , opts]);
-	var posting=null;//try load from cache
-	if (!posting) {
-		if (variants){
-			tokens=variants.expanded;
-			if (tokens.length==1) {
-				posting=this.getPosting(tokens[0]);	
-			} else {
-				var postings=[];
-				for (var i in tokens) {
-					postings.push(this.getPosting(tokens[i]));
-				}
-				posting=plist.combine(postings);
-			}
-		} else {
-			posting=this.getPosting(t);	
-		}
-		//put into cache		
-	}
-
-	var r={posting:posting,op:op};
-	if (opts.expanded) {
-		for(var i in variants)r[i]=variants[i];
-	};
-	if (opts.groupunit) {
-		r.guposting=this.customfunc.loadGroupPosting.apply(this,[opts.groupunit]);
-		r.grouped=plist.groupbyposting(posting,r.guposting);
-		//put into cache
-	} else if (opts.groupbyslot) {
-		r.grouped=plist.groupbyslot(posting, this.meta.slotshift);
-	}
-	return r;
+var termFrequency=function(nterm,ndoc) {
+	if (ndoc==-1) return 1; //the query
+	var T=this.phrases[nterm];
+	var i=this.indexOfSorted(T.docs,ndoc);
+	if (T.docs[i]===ndoc) return Math.log(T.freq[i]+1);
+	else return 0;
 }
-
 var isWildcard=function(raw) {
 	return !!raw.match(/[\*\?]/);
 }
@@ -222,7 +88,6 @@ var parseTerm = function(raw,opts) {
 	return res;
 }
 var loadTerm=function() {
-	
 	var db=this.db, cache=db.postingcache;
 	var terms=this.terms;
 	for (var i in this.terms) {
@@ -245,6 +110,7 @@ var loadTerm=function() {
 
 }
 var loadPhrase=function(phrase) {
+	/* remove leading and ending wildcard */
 	var db=this.db, cache=db.postingcache;
 	if (cache[phrase.key]) {
 		phrase.posting=cache[phrase.key];
@@ -320,6 +186,7 @@ var groupBy=function(gu) {
 		matchfunc=matchPosting;
 	}
 	this.groupunit=gu;
+	/* might need it in the future
 	for (var i in terms) {
 		if (terms[i].wildcard) continue;
 
@@ -335,7 +202,7 @@ var groupBy=function(gu) {
 		terms[i].docs=res.docs;
 		docfreq[this.groupunit]={doclist:terms[i].docs,freq:terms[i].freq};
 	}
-
+	*/
 	for (var i in phrases) {
 		var key=phrases[i].key;
 		var docfreq=docfreqcache[key];
@@ -392,6 +259,7 @@ var trim=function(start,end) {
 var RANK={'vsm':rankvsm};
 var search=function(opts) {
 	if (!this.trimmed) trim.apply(this);
+
 	for (var i in opts) this.opts[i]=opts[i];
 	//VSM prefer union
 	if (!this.opts.op && this.opts.rank=='vsm') this.opts.op='union';
@@ -403,6 +271,7 @@ var search=function(opts) {
 			rankmodel.rank.apply(this);
 		}
 	}
+	this.searched=true;
 	return this;
 }
 // sequance : load.groupBy.trim.search.rank.highlight
@@ -438,14 +307,21 @@ var newQuery =function(query,opts) {
 		}
 		phrase_terms[i].key=phrases[i];
 	}
-	return {
-		db:this,query:query,phrases:phrase_terms,terms:terms,
-		groupunit:'',
-		load:load,groupBy:groupBy,
-		search:search,
-		trim:trim,
-		opts:opts
+	var Q={
+		db:this,opts:opts,query:query,phrases:phrase_terms,terms:terms,groupunit:'',
+		load:load,groupBy:groupBy,search:search,trim:trim,
+		getPhraseWidth:highlight.getPhraseWidth,
+		highlight:highlight.highlight,
+		termFrequency:termFrequency,
+		indexOfSorted:plist.indexOfSorted,
 	};
+	Q.slotsize=Math.pow(2,this.meta.slotshift);
+	Q.slotcount=this.meta.slotcount;
+	var that=this;
+	Q.tokenize=function() {return that.customfunc.tokenize.apply(that,arguments);}
+	Q.getRange=function() {return that.getRange.apply(that,arguments)};
+	//API.queryid='Q'+(Math.floor(Math.random()*10000000)).toString(16);
+	return Q;
 }
 module.exports={
 	newQuery:newQuery,

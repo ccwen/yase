@@ -63,12 +63,12 @@ QUnit.test("load and group query2",function() {
   var Q=search.newQuery.apply(db,[query2]);
   Q.load().groupBy('p');
   n=480;
-  deepEqual(Q.terms[0].posting,[384,n,n+1,n+2]);
-  deepEqual(Q.terms[0].docs,[4,5]);
+  deepEqual(Q.phrases[0].posting,[384,n,n+1,n+2]);
+  deepEqual(Q.phrases[0].docs,[4,5]);
 
-  deepEqual(Q.terms[1].docs,[1]);
-  deepEqual(Q.terms[3].docs,[0,1,4]);
-  deepEqual(Q.terms[3].freq,[1,2,1]);
+  deepEqual(Q.phrases[1].docs,[1]);
+  deepEqual(Q.phrases[2].docs,[0,1,4]);
+  deepEqual(Q.phrases[2].freq,[1,2,1]);
   
   deepEqual(Q.phrases[1].posting,[103]);
 });
@@ -79,6 +79,11 @@ QUnit.test("a dog",function() {
   var Q=search.newQuery.apply(db,["a 2* dog"]);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[233,297,385]);
+  var r=[];
+  for (var i in Q.phrases[0].posting) {
+    r.push(Q.getPhraseWidth(0,Q.phrases[0].posting[i]));
+  }  
+  deepEqual(r,[1,3,2]);
 
   var Q=search.newQuery.apply(db,["a * dog"]);
   Q.load().groupBy('p');
@@ -127,17 +132,22 @@ QUnit.test("trim posting",function() {
 });
 
 QUnit.test("vsm",function() {
- var Q=search.newQuery.apply(db,[["fish","dog","cat"],
-  {groupunit:'p',rank:'vsm'}]);
- Q.search();
- var last=8;
- equal(Q.score[last]>=1,true); //last one is the highest
- deepEqual(Q.score[last-1]==Q.score[last-2],true);//same query same score
- deepEqual(Q.score[last-3]<Q.score[last-2],true); //rare term "fish" has higher rank
- console.log(Q.score) 
- console.log(Q.docs) 
+  var Q=search.newQuery.apply(db,[["fish","dog","cat"],
+   {groupunit:'p',rank:'vsm'}]);
  
+  Q.search();
 
+  equal(Q.score[0][0]>=1,true); //last one is the highest
+  deepEqual(Q.score[1][0]==Q.score[2][0],true);//same query same score
+  console.log(JSON.stringify(Q.score));
+ 
+});
+
+QUnit.test("highlight",function(){
+  var Q=search.newQuery.apply(db,[["fish","dog","cat"],
+   {groupunit:'p',op:'union'}]);
+  Q.search().highlight();
+  equal(Q.texts['10'],'<p>\n<hl n="2">cat </hl><hl n="0">fish </hl><hl n="1">dog </hl>kitty\n</p>\n');
 });
 
 /*
