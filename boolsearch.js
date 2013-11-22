@@ -80,6 +80,7 @@ var OPERATION={'include':intersect, 'union':union, 'exclude':subtract};
 var boolSearch=function(opts) {
 	if (!this.phrases.length) return;
 	var r=this.phrases[0].docs;
+  /* ignore operator of first phrase */
 	for (var i=1;i<this.phrases.length;i++) {
 		var op= opts.op[i] || 'union';
 		r=OPERATION[op](r,this.phrases[i].docs);

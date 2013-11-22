@@ -299,19 +299,23 @@ var newQuery =function(query,opts) {
 	
 	var phrase_terms=[];
 	var terms=[],variants=[],termcount=0,operators=[];
-
-	for  (var i in phrases) {
-		var op=getOperator(phrases[i]);
+	var pc=0;//phrase count
+	for  (var i=0;i<phrases.length;i++) {
+		var op=getOperator(phrases[pc]);
 		operators.push(op);
-		if (op) phrases[i]=phrases[i].substring(1);
+		if (op) phrases[pc]=phrases[pc].substring(1);
 
-		var tokens=this.customfunc.tokenize.apply(this,[phrases[i]]);
+		var tokens=this.customfunc.tokenize.apply(this,[phrases[pc]]);
 		phrase_terms.push(newPhrase());
 		var j=0;
 
 		while (j<tokens.length) {
 			var raw=tokens[j];
 			if (isWildcard(raw)) {
+				if (phrase_terms[pc].termid.length==0)  { //skip leading wild card
+					j++
+					continue;
+				}
 				terms.push(parseWildcard.apply(this,[raw]));
 			} else if (isOrTerm(raw)){
 				var term=orTerms.apply(this,[tokens,j]);
@@ -320,10 +324,24 @@ var newQuery =function(query,opts) {
 			} else {
 				terms.push(parseTerm.apply(this,[raw]));
 			}
-			phrase_terms[i].termid.push(termcount++);
+			phrase_terms[pc].termid.push(termcount++);
 			j++;
 		}
-		phrase_terms[i].key=phrases[i];
+		phrase_terms[pc].key=phrases[pc];
+
+		//remove ending wildcard
+		
+		var P=phrase_terms[pc];
+
+		do {
+			T=terms[P.termid[P.termid.length-1]];
+			if (!T) break;
+			if (T.wildcard) P.termid.pop(); else break;
+		} while(T);
+		
+		if (P.termid.length==0) {
+			phrase_terms.pop();
+		} else pc++;
 	}
 	opts.op=operators;
 

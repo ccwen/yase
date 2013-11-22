@@ -31,6 +31,27 @@ QUnit.test("newQuery 1",function() {
 
 });
 
+QUnit.test("ignore leading and ending wildcard",function() {
+  var res=search.newQuery.apply(db,["3* abc"]);
+  deepEqual(res.phrases[0].termid,[0]);
+  deepEqual(res.phrases[0].termid.length,1);
+  equal(res.terms[0].key,"abc");
+
+  var res=search.newQuery.apply(db,["abc 3*"]);
+  deepEqual(res.phrases[0].termid,[0]);
+  deepEqual(res.phrases[0].termid.length,1);
+  equal(res.terms[0].key,"abc");
+
+
+  var res=search.newQuery.apply(db,["3* abc 3*"]);
+  deepEqual(res.phrases[0].termid,[0]);
+  deepEqual(res.phrases[0].termid.length,1);
+  equal(res.terms[0].key,"abc");
+
+  var res=search.newQuery.apply(db,["3*"]);
+  equal(res.phrases.length,0)  
+});
+
 var query2=["e%","b5 b6","a1"];
 QUnit.test("newQuery 2",function() {
   var res=search.newQuery.apply(db,[query2]);
