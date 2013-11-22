@@ -13,8 +13,8 @@ var googlequerysyntax=require('../querysyntax_google');
 Test drive development.
 */
 QUnit.test("",function() {
-  var r=googlequerysyntax.parse("中文 康熙");
-  deepEqual(r,["中文","康熙"]);
+  var r=googlequerysyntax.parse("中文 +康熙 -陳爽");
+  deepEqual(r,["中文","+康熙","-陳爽"]);
 });
 
 QUnit.test("",function() {
@@ -23,6 +23,10 @@ QUnit.test("",function() {
 });
 
 QUnit.test("",function() {
-  var r=googlequerysyntax.parse('"this is a book" and pencil');
-  deepEqual(r,["this is a book","and","pencil"]);
+  var r=googlequerysyntax.parse('there are "a book" and '+"'a pencil'");
+  deepEqual(r,['there','are','a book','and','a pencil']);
+});
+QUnit.test("",function() {
+  var r=googlequerysyntax.parse('there are "+a book" and '+"'-a pencil'");
+  deepEqual(r,['there','are','+a book','and','-a pencil']);
 });
