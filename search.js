@@ -8,22 +8,16 @@
   2: groupposting ready
   3: docs found and ranked
   4: highlighted text ok
-
 */
-
- 
 
 var plist=require('./plist.js');
 var boolsearch=require('./boolsearch.js');
-var taghandlers=require('./taghandlers.js');
-
 var rankvsm=require('./rankvsm');
 var highlight=require('./highlight');
 var querysyntax_google=require('./querysyntax_google');
 
 /* load similar token with same prefix or simplified (dediacritic )*/
 var getTermVariants=function(term,opts) {
-
 	opts=opts||{};
 	opts.max=opts.max||100;
 	var count=0;
@@ -44,13 +38,10 @@ var getTermVariants=function(term,opts) {
 			else lengths.push(0)			
 		}
 	}
-	
 	return { expanded:expanded ,simplified:simplified, 
 		lengths: lengths, 
 		more: expanded.length>=opts.max};
-
 }
-
 
 var termFrequency=function(nterm,ndoc) {
 	if (ndoc==-1) return 1; //the query
@@ -73,8 +64,7 @@ var parseWildcard=function(raw) {
 }
 var parseTerm = function(raw,opts) {
 	var res={raw:raw,tokens:[],term:'',op:''};
-	var term=raw;
-	var op=0;
+	var term=raw, op=0;
 	var firstchar=term[0];
 	if (firstchar=='-') {
 		term=term.substring(1);
@@ -125,13 +115,11 @@ var loadPhrase=function(phrase) {
 		phrase.posting=cache[phrase.key];
 		return this;
 	}
-
 	if (phrase.termid.length==1) {
 		cache[phrase.key]
 		 =phrase.posting=this.terms[phrase.termid[0]].posting;
 		return this;
 	}
-
 	var i=0, r=[],dis=0;
 	while(i<phrase.termid.length) {
 	    var T=this.terms[phrase.termid[i]];
@@ -156,8 +144,7 @@ var loadPhrase=function(phrase) {
 		    	}
 		    }
 		}
-		dis++;
-		i++;
+		dis++;	i++;
 	  }
 	  phrase.posting=r;
 	  cache[phrase.key]=r;
@@ -179,7 +166,6 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting);
 }
 var groupBy=function(gu) {
-	
 	if (this.phase<1) this.load();
 	if (this.phase>=2) return this;
 	gu=gu||this.opts.groupunit||'';
@@ -196,23 +182,6 @@ var groupBy=function(gu) {
 		matchfunc=matchPosting;
 	}
 	this.groupunit=gu;
-	/* might need it in the future
-	for (var i in terms) {
-		if (terms[i].wildcard) continue;
-
-		var key=terms[i].key;
-		var docfreq=docfreqcache[key];
-		if (!docfreq) docfreq=docfreqcache[key]={};
-		if (!docfreq[this.groupunit]) {
-			docfreq[this.groupunit]={doclist:null,freq:null};
-		}
-		if (!terms[i].posting) continue;
-		var res=matchfunc.apply(this,[terms[i].posting]);;
-		terms[i].freq=res.freq;
-		terms[i].docs=res.docs;
-		docfreq[this.groupunit]={doclist:terms[i].docs,freq:terms[i].freq};
-	}
-	*/
 	for (var i in phrases) {
 		var key=phrases[i].key;
 		var docfreq=docfreqcache[key];
@@ -246,27 +215,10 @@ var orTerms=function(tokens,now) {
 		term2.tokens.push(term2.key);
 		term.tokens=term.tokens.concat(term2.tokens);
 		term.key+=','+term2.key;
-	} ;
+	}
 	return term;
 }
-/*
-var trim=function(start,end) {
-	if (!this.grouped) groupBy.apply(this);
 
-	if (!this.posting || !this.posting.length)return this;
-	if (start==0 && end==-1) {
-		this.trimmed=true;
-		return;
-	}
-	start=start||this.opts.start;
-	this.opts.start=start;
-	end=end||this.opts.end;
-	this.opts.end=end;	
-	this.posting=plist.trim(this.posting,start,end);
-	this.trimmed=true;
-	return this;
-}
-*/
 var RANK={'vsm':rankvsm};
 var run=function(opts) {
 	if (this.phase<2) groupBy.apply(this);
@@ -300,9 +252,7 @@ var getOperator=function(raw) {
 	if (raw[0]=='-') op='exclude';
 	return op;
 }
-
 var QUERYSYNTAX={google:querysyntax_google};
-
 var newQuery =function(query,opts) {
 	opts=opts||{};
 
@@ -312,18 +262,15 @@ var newQuery =function(query,opts) {
 		phrases=querysyntax.parse(query);
 	}
 	
-	var phrase_terms=[];
-	var terms=[],variants=[],termcount=0,operators=[];
+	var phrase_terms=[], terms=[],variants=[],termcount=0,operators=[];
 	var pc=0;//phrase count
 	for  (var i=0;i<phrases.length;i++) {
 		var op=getOperator(phrases[pc]);
 		operators.push(op);
 		if (op) phrases[pc]=phrases[pc].substring(1);
 
-		var tokens=this.customfunc.tokenize.apply(this,[phrases[pc]]);
+		var j=0,tokens=this.customfunc.tokenize.apply(this,[phrases[pc]]);
 		phrase_terms.push(newPhrase());
-		var j=0;
-
 		while (j<tokens.length) {
 			var raw=tokens[j];
 			if (isWildcard(raw)) {
@@ -346,7 +293,6 @@ var newQuery =function(query,opts) {
 
 		//remove ending wildcard
 		var P=phrase_terms[pc];
-
 		do {
 			T=terms[P.termid[P.termid.length-1]];
 			if (!T) break;
