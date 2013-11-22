@@ -32,18 +32,18 @@ QUnit.test("newQuery 1",function() {
 });
 
 QUnit.test("ignore leading and ending wildcard",function() {
-  var res=search.newQuery.apply(db,["3* abc"]);
+  var res=search.newQuery.apply(db,['"3* abc"']);
   deepEqual(res.phrases[0].termid,[0]);
   deepEqual(res.phrases[0].termid.length,1);
   equal(res.terms[0].key,"abc");
 
-  var res=search.newQuery.apply(db,["abc 3*"]);
+  var res=search.newQuery.apply(db,['"abc 3*"']);
   deepEqual(res.phrases[0].termid,[0]);
   deepEqual(res.phrases[0].termid.length,1);
   equal(res.terms[0].key,"abc");
 
 
-  var res=search.newQuery.apply(db,["3* abc 3*"]);
+  var res=search.newQuery.apply(db,['"3* abc 3*"']);
   deepEqual(res.phrases[0].termid,[0]);
   deepEqual(res.phrases[0].termid.length,1);
   equal(res.terms[0].key,"abc");
@@ -69,7 +69,7 @@ QUnit.test("newQuery 2",function() {
   
 });
 
-var query3="a1 2* a3";
+var query3='"a1 2* a3"';
 //a1 a3 , yes
 //a1 x a3  yes
 //a1 x y a3  yes
@@ -110,7 +110,7 @@ QUnit.test("load and group query2",function() {
 
 QUnit.test("a dog",function() {
 
-  var Q=search.newQuery.apply(db,["a 2* dog"]);
+  var Q=search.newQuery.apply(db,['"a 2* dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[233,297,385]);
   var r=[];
@@ -119,24 +119,24 @@ QUnit.test("a dog",function() {
   }  
   deepEqual(r,[1,3,2]);
 
-  var Q=search.newQuery.apply(db,["a * dog"]);
+  var Q=search.newQuery.apply(db,['"a * dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[233,385]); // a dog , a happy dog
 
-  var Q=search.newQuery.apply(db,["a ? dog"]);
+  var Q=search.newQuery.apply(db,['"a ? dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[385]);  // a happy dog 
 
-  var Q=search.newQuery.apply(db,["a 2? dog"]);
+  var Q=search.newQuery.apply(db,['"a 2? dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[297]);  //a brown happy dog
 
 
-  var Q=search.newQuery.apply(db,["a -dog"]);
+  var Q=search.newQuery.apply(db,['"a -dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[96,128,256,297,385,516]);  //cat kitty brown happy cow
 
-  var Q=search.newQuery.apply(db,["a 2* -dog"]);
+  var Q=search.newQuery.apply(db,['"a 2* -dog"']);
   Q.load().groupBy('p');
   deepEqual(Q.phrases[0].posting,[96,128,256,516]);  //cat kitty mouse cow
 
@@ -145,24 +145,24 @@ QUnit.test("a dog",function() {
 //TODO Boolean search
 
 QUnit.test("boolean search ",function(){
-  var Q=search.newQuery.apply(db,[["+cat","+kitty"]]);
-  Q.load().groupBy('p').search();
+  var Q=search.newQuery.apply(db,["+cat +kitty"]);
+  Q.load().groupBy('p').run();
 
   deepEqual(Q.docs,[1,10]);
 
-  var Q=search.newQuery.apply(db,[["cat","cow"]]);
-  Q.load().groupBy('p').search();
+  var Q=search.newQuery.apply(db,["cat cow"]);
+  Q.load().groupBy('p').run();
 
   deepEqual(Q.docs,[1,4,5,6,7,8,9,10]);
 
-  var Q=search.newQuery.apply(db,[["cat","-cow"]]);
-  Q.load().groupBy('p').search();
+  var Q=search.newQuery.apply(db,["cat -cow"]);
+  Q.load().groupBy('p').run();
 
   deepEqual(Q.docs,[1,4,7,8,9,10]);
 
 
-  var Q=search.newQuery.apply(db,[["mouse","cat","+happy"]]);
-  Q.load().groupBy('p').search();  
+  var Q=search.newQuery.apply(db,["mouse cat +happy"]);
+  Q.load().groupBy('p').run();  
   deepEqual(Q.docs,[2,4]);  
 });
 
@@ -172,10 +172,10 @@ QUnit.test("trim posting",function() {
 });
 
 QUnit.test("vsm",function() {
-  var Q=search.newQuery.apply(db,[["fish","dog","cat"],
+  var Q=search.newQuery.apply(db,["fish dog cat",
    {groupunit:'p',rank:'vsm'}]);
  
-  Q.search();
+  Q.run();
 
   equal(Q.score[0][0]>=1,true); //last one is the highest
   deepEqual(Q.score[1][0]==Q.score[2][0],true);//same query same score
@@ -185,9 +185,9 @@ QUnit.test("vsm",function() {
 });
 
 QUnit.test("highlight",function(){
-  var Q=search.newQuery.apply(db,[["fish","dog","cat"],
-   {groupunit:'p',op:'union'}]);
-  Q.search().highlight();
+  var Q=search.newQuery.apply(db,["fish dog cat",
+   {groupunit:'p'}]);
+  Q.run().highlightDocs();
   equal(Q.texts['10'],'<p>\n<hl n="2">cat </hl><hl n="0">fish </hl><hl n="1">dog </hl>kitty\n</p>\n');
 });
 

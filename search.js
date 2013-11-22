@@ -1,6 +1,14 @@
 /*
   search rewrite
   SPEC https://docs.google.com/document/d/1CHsr-wnzXdm32xsEt2IY4cneq5AS3zq3dqxeLD3onZU/edit
+
+  QUERY PHASE
+  0: ready
+  1: all postings loaded
+  2: groupposting ready
+  3: docs found and ranked
+  4: highlighted text ok
+
 */
 
  
@@ -11,6 +19,7 @@ var taghandlers=require('./taghandlers.js');
 
 var rankvsm=require('./rankvsm');
 var highlight=require('./highlight');
+var querysyntax_google=require('./querysyntax_google');
 
 /* load similar token with same prefix or simplified (dediacritic )*/
 var getTermVariants=function(term,opts) {
@@ -160,7 +169,7 @@ var load=function() {
 	for (var i in phrases) {
 		loadPhrase.apply(this,[phrases[i]]);
 	}
-	this.loaded=true;
+	this.phase=1;
 	return this;
 }
 var matchSlot=function(pl) {
@@ -170,9 +179,10 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting);
 }
 var groupBy=function(gu) {
+	
+	if (this.phase<1) this.load();
+	if (this.phase>=2) return this;
 	gu=gu||this.opts.groupunit||'';
-	if (!this.loaded) this.load();
-
 	var db=this.db,terms=this.terms,phrases=this.phrases;
 	var docfreqcache=this.db.docfreqcache;
 	var matchfunc=matchSlot;
@@ -216,7 +226,7 @@ var groupBy=function(gu) {
 		phrases[i].docs=res.docs;
 		docfreq[this.groupunit]={doclist:phrases[i].docs,freq:phrases[i].freq};
 	}
-	this.grouped=true;
+	this.phase=2;
 	return this;
 }
 var newPhrase=function() {
@@ -239,7 +249,7 @@ var orTerms=function(tokens,now) {
 	} ;
 	return term;
 }
-
+/*
 var trim=function(start,end) {
 	if (!this.grouped) groupBy.apply(this);
 
@@ -256,10 +266,11 @@ var trim=function(start,end) {
 	this.trimmed=true;
 	return this;
 }
+*/
 var RANK={'vsm':rankvsm};
-var search=function(opts) {
-	if (!this.trimmed) trim.apply(this);
-
+var run=function(opts) {
+	if (this.phase<2) groupBy.apply(this);
+	if (this.phase>=3) return this;
 	for (var i in opts) this.opts[i]=opts[i];
 	
 	boolsearch.search.apply(this,[this.opts]);
@@ -269,7 +280,7 @@ var search=function(opts) {
 			rankmodel.rank.apply(this);
 		}
 	}
-	this.searched=true;
+	this.phase=3;
 	return this;
 }
 // sequance : load.groupBy.trim.search.rank.highlight
@@ -289,13 +300,17 @@ var getOperator=function(raw) {
 	if (raw[0]=='-') op='exclude';
 	return op;
 }
+
+var QUERYSYNTAX={google:querysyntax_google};
+
 var newQuery =function(query,opts) {
 	opts=opts||{};
-	opts.start=opts.start||0;
-	opts.end=opts.end||-1;
 
 	var phrases=query;
-	if (typeof query=='string') phrases=[query];
+	if (typeof query=='string') {
+		var querysyntax=QUERYSYNTAX[opts.querysyntax||'google'];
+		phrases=querysyntax.parse(query);
+	}
 	
 	var phrase_terms=[];
 	var terms=[],variants=[],termcount=0,operators=[];
@@ -330,7 +345,6 @@ var newQuery =function(query,opts) {
 		phrase_terms[pc].key=phrases[pc];
 
 		//remove ending wildcard
-		
 		var P=phrase_terms[pc];
 
 		do {
@@ -347,11 +361,12 @@ var newQuery =function(query,opts) {
 
 	var Q={
 		db:this,opts:opts,query:query,phrases:phrase_terms,terms:terms,groupunit:'',
-		load:load,groupBy:groupBy,search:search,trim:trim,
+		load:load,groupBy:groupBy,run:run,
 		getPhraseWidth:highlight.getPhraseWidth,
-		highlight:highlight.highlight,
+		highlightDocs:highlight.highlightDocs,
+		highlightRanked:highlight.highlightRanked,
 		termFrequency:termFrequency,
-		indexOfSorted:plist.indexOfSorted,
+		indexOfSorted:plist.indexOfSorted,phase:0,
 	};
 	Q.slotsize=Math.pow(2,this.meta.slotshift);
 	Q.slotcount=this.meta.slotcount;
@@ -359,9 +374,62 @@ var newQuery =function(query,opts) {
 	Q.tokenize=function() {return that.customfunc.tokenize.apply(that,arguments);}
 	Q.getRange=function() {return that.getRange.apply(that,arguments)};
 	//API.queryid='Q'+(Math.floor(Math.random()*10000000)).toString(16);
+
 	return Q;
 }
+/* the main entrace */
+var resetPhase=function(opts) {
+	if (this.opts.rank!=opts.rank) this.phase=2;
+	if (this.opts.groupunit!=opts.groupunit) this.phase=1;
+	if (this.opts.query!=opts.query) this.phase=0;
+}
+var search=function(opts) {	
+	var Q=this.querycache[opts.query];
+	if (!Q) {
+		Q=newQuery.apply(this,[opts.query,opts]);
+	} else {
+		resetPhase.apply(this,[opts]);	
+	}	
+ 	Q.run();
+ 	var output=opts.output, O={}; //output fields
+
+ 	var max=opts.max||20; 
+ 	var start=opts.start||0;
+ 	var res={
+ 		hitcount:this.postings.length, 
+ 		doccount:this.docs.length,
+ 		query:opts.query,
+ 		db:this.filename,
+ 		opts:opts,
+ 	},
+
+ 	if (typeof output==='string') output=[output];
+	for (var i in output) O[output[i]]=true;
+
+	if (O['score']) {
+		res.score=score.slice(start,start+max);
+		if (O['texts']) {
+			Q.highlightRanked.apply(this);
+			res.texts=this.texts;
+		}
+	}
+	if (O['docs']) {
+		res.docs=docs.slice(start,start+max);
+		if (O['texts']) {
+			Q.highlightDocs.apply(this);
+			res.texts=this.texts;
+		}
+	}
+
+	/* TOC distribute */
+
+	Q.lastAccess=new DateTime(); //for purging //TODO
+ 	this.querycache[opts.query]=Q;
+ 	return res;
+}
+
 module.exports={
+	search:search,
 	newQuery:newQuery,
 	sortPhrases:sortPhrases,
 	getTermVariants:getTermVariants

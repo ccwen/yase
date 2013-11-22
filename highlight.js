@@ -43,7 +43,7 @@ var getPhraseWidth=function (phraseid,voff) {
 
 	return width;
 }
-/* return [voff, phraseid, phrasewidth] by slot range*/
+/* return [voff, phraseid, phrasewidth, optional_tagname] by slot range*/
 var hitInRange=function(startslot,endslot) {
 	var startvoff=startslot*this.slotsize;
 	var endvoff=endslot*this.slotsize;
@@ -57,30 +57,47 @@ var hitInRange=function(startslot,endslot) {
 
 		res=res.concat(r.map(function(voff){ return [voff,i,width] }));
 	}
-	res.sort(function(a,b){return a[0]-b[0]});
+	// order by voff, if voff is the same, larger width come first.
+	// so the output will be
+	// <tag1><tag2>one</tag2>two</tag1>
+	//TODO, might cause overlap if same voff and same width
+	//need to check tag name
+	res.sort(function(a,b){return a[0]==b[0]? b[2]-a[2] :a[0]-b[0]});
 
 	return res;
 }
+/* inject xml tags into texts */
+var injectTag=function(opts){
+	var hits=opts.hits;
+	var tag=opts.tag||'hl';
+	var output='';
+	for (var t=0;t<opts.textarr.length;t++) {
+		var voff=(opts.startslot+t)*this.slotsize;
+		if (j<hits.length && hits[j][0]>voff+this.slotsize) { //this slot has no hits
+			if (opts.abridged ) output+=opts.abridged; // ...
+			else output+=opts.textarr[t]; //output as it is
+			continue;
+		}
 
-var renderHit=function(textarr,startslot,endslot) {
-	var output='',hits=hitInRange.apply(this,[startslot,endslot]);
-
-	for (var t=0;t<textarr.length;t++) {
-		var tokens=this.tokenize(textarr[t]);
-		var voff=(startslot+t)*this.slotsize;
+		var tokens=this.tokenize(opts.textarr[t]);
 		var i=0,j=0;
 		while (i<tokens.length && tokens[i][0]=='<') output+=tokens[i++];
 		while (i<tokens.length) {
 			if (j<hits.length && voff==hits[j][0]) {
 				var nphrase=hits[j][1], width=hits[j][2];
-				output+= '<hl n="'+nphrase+'">';
-				while (width) {
-					output+=tokens[i];
-					if (i>=tokens.length) break;
-					if (tokens[i][0]!='<') {voff++;width--;}
-					i++;
+				var tag=hits[j][3] || tag;
+				if (width) {
+					output+= '<'+tag+' n="'+nphrase+'">';
+					while (width) {
+						output+=tokens[i];
+						if (i>=tokens.length) break;
+						if (tokens[i][0]!='<') {voff++;width--;}
+						i++;
+					}
+					output+='</'+tag+'>';
+				} else {
+					output+= '<'+tag+' n="'+nphrase+'"/>';
 				}
-				output+='</hl>';
 				j++;
 			} else {
 				output+=tokens[i];
@@ -92,20 +109,42 @@ var renderHit=function(textarr,startslot,endslot) {
 	}
 	return output;
 }
-var highlightDocs=function() {
-	if (!this.searched) search.apply(this);
-	var startdoc=this.opts.startdoc || 0;
-	var enddoc=this.opts.enddoc || -1;
-	if (enddoc==-1) enddoc=this.docs.length;
-	if (!this.texts) this.texts={};
-
-	for (var i=startdoc;i<enddoc;i++) {
-		var docid=this.docs[i];
+var highlight=function(opts,type) {
+	opts=opts||{};
+	if (this.phase<3) run.apply(this);
+	if (this.phase>=4) return this;
+	var startdoc=opts.start||this.opts.startdoc || 0;
+	var enddoc=startdoc+ (opts.max||this.opts.max||20);
+	if (enddoc>this.docs.length) enddoc=this.docs.length;
+	this.texts={};
+	var renderDoc=function(docid) {
 		var res=getDocText.apply(this,[docid]);
 		if (!this.texts[docid]) {
-			this.texts[docid]=renderHit.apply(this,[res.text,res.start,res.end]);
-		}
+			var opt={textarr:res.text,
+				startslot:res.start,endslot:res.end,
+				hits:null,tag:'hl',abridged:this.opts.abridged
+			};
+			opt.hits=hitInRange.apply(this,[res.start,res.end]);
+			this.texts[docid]=injectTag.apply(this,[opt]);
+		}		
 	}
+	if (type=='docs') {
+		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[this.docs[i]]);
+	} else if (type=='ranked') {
+		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[this.score[i][1]]);
+	}
+	this.phrase=4;
 	return this;
 }
-module.exports={highlight:highlightDocs,getPhraseWidth:getPhraseWidth};
+var highlightDocs=function(opts) {
+	return highlight.apply(this,[opts,'docs']);
+}
+var highlightRanked=function(opts) {
+	return highlight.apply(this,[opts,'ranked']);
+}
+module.exports={
+	highlightDocs:highlightDocs,
+	highlightRanked:highlightRanked,
+	injectTag:injectTag,
+	getPhraseWidth:getPhraseWidth
+};

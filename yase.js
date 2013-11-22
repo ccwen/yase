@@ -359,6 +359,7 @@ var yase_use = function(fn,opts) {
 
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
+		instance.search=search.search;
 		instance.phraseSearch=search1.phraseSearch;
 		instance.boolSearch=search1.boolSearch;
 		instance.renderhits=search1.renderhits;
@@ -380,6 +381,7 @@ var yase_use = function(fn,opts) {
 		instance.getRange=getRange;	
 		instance.parseSelector=require('./taghandlers').parseSelector;
 		instance.yaseloaded=true;
+		instance.filename=fn;
 
 		instance.expandToken=search1.expandToken;
 		instance.newQuery=search.newQuery;

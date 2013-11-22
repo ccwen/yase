@@ -1,7 +1,7 @@
-/* take Google query format*/
-
-/*
-	
+/* Google query format
+split query string into array of phrase
+space as phrase delimiter
+"a phrase"
 */
 var parse=function(input) {
 	var match=input.match(/(".+?"|'.+?'|\S+)/g)
@@ -10,7 +10,7 @@ var parse=function(input) {
 		if (h===t&&(h==='"'|h==="'")) str=str.substr(1,n-2)
 		return str
 	})
-	console.log(input,'==>',match)
+	//console.log(input,'==>',match)
 	return match;
 }
 module.exports={parse:parse}
