@@ -375,6 +375,7 @@ var yase_use = function(fn,opts) {
 		instance.postingcache={};
 		instance.docfreqcache={}; // term/phrase doclist and freq
 		instance.groupcache={};  //store group posting
+		instance.querycache={};
 
 		instance.tagpostingcache={};
 		instance.getTextRange=getTextRange;		

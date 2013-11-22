@@ -383,48 +383,61 @@ var resetPhase=function(opts) {
 	if (this.opts.groupunit!=opts.groupunit) this.phase=1;
 	if (this.opts.query!=opts.query) this.phase=0;
 }
+var db_purgeObsoleteQuery=function() {
+	var now=new DateTime();
+	for (var i in this.querycache) {
+		var diffms=now-this.querycache[i].lastAccess;
+		var diffMins = Math.round(((diffms % 86400000) % 3600000) / 60000); // minutes
+		if (diffMins>30) delete this.querycache[i];
+	}
+}
 var search=function(opts) {	
-	var Q=this.querycache[opts.query];
-	if (!Q) {
-		Q=newQuery.apply(this,[opts.query,opts]);
-	} else {
-		resetPhase.apply(this,[opts]);	
-	}	
+	var Q=this.db.querycache[opts.query];
+	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
+	else resetPhase.apply(Q,[opts]);	
+	
  	Q.run();
  	var output=opts.output, O={}; //output fields
-
- 	var max=opts.max||20; 
+ 	if (typeof output==='string') output=[output];
+	for (var i in output) O[output[i]]=true;
+	var max=opts.max||20; 
  	var start=opts.start||0;
+
  	var res={
- 		hitcount:this.postings.length, 
- 		doccount:this.docs.length,
+ 		hitcount:Q.postings.length, 
+ 		doccount:Q.docs.length,
  		query:opts.query,
  		db:this.filename,
  		opts:opts,
- 	},
-
- 	if (typeof output==='string') output=[output];
-	for (var i in output) O[output[i]]=true;
-
+ 	};
 	if (O['score']) {
 		res.score=score.slice(start,start+max);
 		if (O['texts']) {
 			Q.highlightRanked.apply(this);
-			res.texts=this.texts;
+			res.texts=Q.texts;
 		}
 	}
 	if (O['docs']) {
 		res.docs=docs.slice(start,start+max);
 		if (O['texts']) {
 			Q.highlightDocs.apply(this);
-			res.texts=this.texts;
+			res.texts=Q.texts;
 		}
 	}
 
-	/* TOC distribute */
+	if (O['postings']) { //for calculating distribution in TOC nodes.
+		res.postings=Q.postings; 
+	}
+	if (O['hits']) {//for rendering a text page
+		var startslot=opts.startslot||0;
+		var endslot=opts.endslot||this.meta.slotcount;
+		res.hits=highlight.hitInRange.apply(this,[startslot,endslot]);
+	}
 
-	Q.lastAccess=new DateTime(); //for purging //TODO
+	Q.lastAccess=new DateTime(); 
  	this.querycache[opts.query]=Q;
+
+	db_purgeObsoleteQuery.call(this.db);
  	return res;
 }
 

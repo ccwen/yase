@@ -146,5 +146,6 @@ module.exports={
 	highlightDocs:highlightDocs,
 	highlightRanked:highlightRanked,
 	injectTag:injectTag,
+	hitInRange:hitInRange,
 	getPhraseWidth:getPhraseWidth
 };
