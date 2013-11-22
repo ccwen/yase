@@ -261,8 +261,6 @@ var search=function(opts) {
 	if (!this.trimmed) trim.apply(this);
 
 	for (var i in opts) this.opts[i]=opts[i];
-	//VSM prefer union
-	if (!this.opts.op && this.opts.rank=='vsm') this.opts.op='union';
 	
 	boolsearch.search.apply(this,[this.opts]);
 	if (this.opts.rank ){
@@ -275,7 +273,22 @@ var search=function(opts) {
 	return this;
 }
 // sequance : load.groupBy.trim.search.rank.highlight
-
+var sortPhrases=function(query) {
+	if (typeof query=='string') return query;
+	if (!query.length) return query;
+	for (var i in query) {
+		var first=query[i][0];
+		if (first!='-' && first!='+') query[i]=' '+query[i];
+	}
+	query=query.sort(function(a,b){return a==b?0:(a>b?1:-1)});
+	return query.map(function(a){return a.trim()});
+}
+var getOperator=function(raw) {
+	var op='';
+	if (raw[0]=='+') op='include';
+	if (raw[0]=='-') op='exclude';
+	return op;
+}
 var newQuery =function(query,opts) {
 	opts=opts||{};
 	opts.start=opts.start||0;
@@ -285,12 +298,17 @@ var newQuery =function(query,opts) {
 	if (typeof query=='string') phrases=[query];
 	
 	var phrase_terms=[];
-	var terms=[],variants=[],termcount=0;
+	var terms=[],variants=[],termcount=0,operators=[];
 
 	for  (var i in phrases) {
+		var op=getOperator(phrases[i]);
+		operators.push(op);
+		if (op) phrases[i]=phrases[i].substring(1);
+
 		var tokens=this.customfunc.tokenize.apply(this,[phrases[i]]);
 		phrase_terms.push(newPhrase());
 		var j=0;
+
 		while (j<tokens.length) {
 			var raw=tokens[j];
 			if (isWildcard(raw)) {
@@ -298,7 +316,7 @@ var newQuery =function(query,opts) {
 			} else if (isOrTerm(raw)){
 				var term=orTerms.apply(this,[tokens,j]);
 				terms.push(term);
-				j+=term.term.split(',').length-1;
+				j+=term.key.split(',').length-1;
 			} else {
 				terms.push(parseTerm.apply(this,[raw]));
 			}
@@ -307,6 +325,8 @@ var newQuery =function(query,opts) {
 		}
 		phrase_terms[i].key=phrases[i];
 	}
+	opts.op=operators;
+
 	var Q={
 		db:this,opts:opts,query:query,phrases:phrase_terms,terms:terms,groupunit:'',
 		load:load,groupBy:groupBy,search:search,trim:trim,
@@ -325,5 +345,6 @@ var newQuery =function(query,opts) {
 }
 module.exports={
 	newQuery:newQuery,
+	sortPhrases:sortPhrases,
 	getTermVariants:getTermVariants
 };

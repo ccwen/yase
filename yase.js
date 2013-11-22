@@ -6,8 +6,8 @@ yadb for supporting full text search
 
 var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
-var Search=require('./search1');
-
+var search1=require('./search1');
+var search=require('./search');
 var getPosting=function(token) {
 	if (this.customfunc.token2tree) {
 		var tokenarr=this.customfunc.token2tree.apply(this,[token]);
@@ -32,7 +32,7 @@ var getKeys=function(id) {
 var getText=function(slot,opts) {
 	if (opts && opts.tofind) {
 	 	//console.log('text with tofind',opts.tofind);
-		t=Search.highlighttexts.apply(this, [slot,opts.tofind,opts]);
+		t=search1.highlighttexts.apply(this, [slot,opts.tofind,opts]);
 	} else {
 	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
 	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
@@ -359,9 +359,9 @@ var yase_use = function(fn,opts) {
 
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
-		instance.phraseSearch=Search.phraseSearch;
-		instance.boolSearch=Search.boolSearch;
-		instance.renderhits=Search.renderhits;
+		instance.phraseSearch=search1.phraseSearch;
+		instance.boolSearch=search1.boolSearch;
+		instance.renderhits=search1.renderhits;
 		instance.getPosting=getPosting;
 		instance.closestTag=closestTag;
 		instance.sourceInfo=sourceInfo;
@@ -381,8 +381,8 @@ var yase_use = function(fn,opts) {
 		instance.parseSelector=require('./taghandlers').parseSelector;
 		instance.yaseloaded=true;
 
-		instance.expandToken=Search.expandToken;
-		instance.newQuery=Search.newQuery;
+		instance.expandToken=search1.expandToken;
+		instance.newQuery=search.newQuery;
 		instance.getdb=function() {return db};
 	}
 

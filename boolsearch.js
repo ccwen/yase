@@ -21,6 +21,28 @@ function intersect(I, J) {
   return result;
 }
 
+/* return all items in I but not in J */
+function subtract(I, J) {
+  var i = j = 0;
+  var result = [];
+
+  while( i < I.length && j < J.length ){
+    if (I[i]==J[j]) {
+      i++;j++;
+    } else if (I[i]<J[j]) {
+      while (I[i]<J[j]) result.push(I[i++]);
+    } else {
+      while(J[j]<I[i]) j++;
+    }
+  }
+
+  if (j==J.length) {
+    while (i<I.length) result.push(I[i++]);
+  }
+
+  return result;
+}
+
 var union=function(a,b) {
 	if (!a || !a.length) return b;
 	if (!b || !b.length) return a;
@@ -53,17 +75,13 @@ var union=function(a,b) {
     }
     return result;
 }
-var OPERATION={'intersect':intersect, 'union':union};
+var OPERATION={'include':intersect, 'union':union, 'exclude':subtract};
 
 var boolSearch=function(opts) {
 	if (!this.phrases.length) return;
-
-	
-	var r=this.phrases[0].docs ,op ='intersect';
-	opts.op=opts.op||op;
+	var r=this.phrases[0].docs;
 	for (var i=1;i<this.phrases.length;i++) {
-		if (typeof opts.op==='object') op= opts.op[i-1] || opts.op;
-		else op=opts.op;
+		var op= opts.op[i] || 'union';
 		r=OPERATION[op](r,this.phrases[i].docs);
 	}
 	this.docs=plist.unique(r);

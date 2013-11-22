@@ -233,7 +233,7 @@ var plfollow = function (pl1, pl2, distance) {
       i++;
     } else {
       if (k>=pl2.length) break;
-      k=indexOfSorted (pl1,pl2[k]-maxdis);
+      k=indexOfSorted (pl1,pl2[k]-distance);
       if (k>i) i=k;
       else break;
     }

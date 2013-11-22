@@ -124,19 +124,24 @@ QUnit.test("a dog",function() {
 //TODO Boolean search
 
 QUnit.test("boolean search ",function(){
-  var Q=search.newQuery.apply(db,[["cat","kitty"]]);
+  var Q=search.newQuery.apply(db,[["+cat","+kitty"]]);
   Q.load().groupBy('p').search();
 
   deepEqual(Q.docs,[1,10]);
 
   var Q=search.newQuery.apply(db,[["cat","cow"]]);
-  Q.load().groupBy('p').search({op:'union'});
+  Q.load().groupBy('p').search();
 
   deepEqual(Q.docs,[1,4,5,6,7,8,9,10]);
 
+  var Q=search.newQuery.apply(db,[["cat","-cow"]]);
+  Q.load().groupBy('p').search();
 
-  var Q=search.newQuery.apply(db,[["mouse","cat","happy"]]);
-  Q.load().groupBy('p').search({op:['union','intersect']});  
+  deepEqual(Q.docs,[1,4,7,8,9,10]);
+
+
+  var Q=search.newQuery.apply(db,[["mouse","cat","+happy"]]);
+  Q.load().groupBy('p').search();  
   deepEqual(Q.docs,[2,4]);  
 });
 
@@ -154,7 +159,7 @@ QUnit.test("vsm",function() {
   equal(Q.score[0][0]>=1,true); //last one is the highest
   deepEqual(Q.score[1][0]==Q.score[2][0],true);//same query same score
   console.log(JSON.stringify(Q.score));
-  
+
  
 });
 
@@ -165,6 +170,11 @@ QUnit.test("highlight",function(){
   equal(Q.texts['10'],'<p>\n<hl n="2">cat </hl><hl n="0">fish </hl><hl n="1">dog </hl>kitty\n</p>\n');
 });
 
+
+QUnit.test("sort phrases",function() {
+  var r=search.sortPhrases(['+c','-d','+b','a','-e']);
+  deepEqual(r,['a','+b','+c','-d','-e']);
+});
 /*
 QUnit.test( "loadterm", function() {
   var res=search.loadTerm.apply(db,["a"]);
