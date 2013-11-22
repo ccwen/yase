@@ -338,7 +338,7 @@ var db_purgeObsoleteQuery=function() {
 	}
 }
 var search=function(opts) {	
-	var Q=this.db.querycache[opts.query];
+	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);	
 	
@@ -356,14 +356,14 @@ var search=function(opts) {
  		db:this.filename,
  		opts:opts,
  	};
-	if (O['score']) {
+	if (O['score']) { //for ranked listing
 		res.score=score.slice(start,start+max);
 		if (O['texts']) {
 			Q.highlightRanked.apply(this);
 			res.texts=Q.texts;
 		}
 	}
-	if (O['docs']) {
+	if (O['docs']) { //for natural listing
 		res.docs=docs.slice(start,start+max);
 		if (O['texts']) {
 			Q.highlightDocs.apply(this);
@@ -382,14 +382,13 @@ var search=function(opts) {
 
 	Q.lastAccess=new DateTime(); 
  	this.querycache[opts.query]=Q;
-
-	db_purgeObsoleteQuery.call(this.db);
+	db_purgeObsoleteQuery.call(this);
  	return res;
 }
 
 module.exports={
 	search:search,
-	newQuery:newQuery,
-	sortPhrases:sortPhrases,
-	getTermVariants:getTermVariants
+	newQuery:newQuery,//remove this...
+	sortPhrases:sortPhrases, //just for testing, should be able to remove
+	getTermVariants:getTermVariants //this is needed by Pali terms
 };
