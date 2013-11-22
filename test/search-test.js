@@ -4,18 +4,21 @@ var plist=Yase.plist;
 var search=Yase.search;
 
 var db=Yase.use('search-test-db.ydb');
-var query1=["a1 a2","b2 -b3"];
+
 
 QUnit.test("match slot",function() {
-  var r=plist.matchSlot([1,2,3,32,33,34,128,129],5);
+  // 0-31, 32-63, 64-95, 96-127, 128-159, 160-192
+  //  0      1     2       3       4         5
+  //  3      3     0       0       2       0 
+  var r=plist.matchSlot([1,2,3,32,33,34,128,129,130],5);
   deepEqual(r.docs,[0,1,4]);
-  deepEqual(r.freq,[3,3,2]);
+  deepEqual(r.freq,[3,3,3]);
 });
 
 /*TODO
   skip leading and ending wildcard
 */
-
+var query1=["a1 a2","b2 -b3"];
 QUnit.test("newQuery 1",function() {
   var res=search.newQuery.apply(db,[query1]);
   deepEqual(res.phrases[0].termid,[0,1]);
@@ -35,14 +38,21 @@ QUnit.test("newQuery 2",function() {
   deepEqual(res.phrases[1].termid,[1,2]);
   equal(res.terms[0].key,"e%");
   equal(res.terms[1].key,"b5");
-  equal(res.terms[2].key,"b6");
-  deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
   deepEqual(res.terms[1].tokens,[]);
+
+  equal(res.terms[2].key,"b6");
+  deepEqual(res.terms[2].tokens,[]);
+
+  deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
 
   
 });
 
 var query3="a1 2* a3";
+//a1 a3 , yes
+//a1 x a3  yes
+//a1 x y a3  yes
+//a1 x y z a3 no
 QUnit.test("newQuery 3",function() {
   var res=search.newQuery.apply(db,[query3]);
   
@@ -55,8 +65,11 @@ QUnit.test("newQuery 3",function() {
 var query4="a3 a4,b4,c4";
 QUnit.test("newQuery 4",function() {
   var res=search.newQuery.apply(db,[query4]);
+  equal(res.terms.length,2);
   equal(res.terms[0].key,"a3");
+  equal(res.terms[1].key,"a4,b4,c4");
   deepEqual(res.terms[1].tokens,["a4","b4","c4"]);
+  console.log(res.terms)
 });
 
 QUnit.test("load and group query2",function() {
@@ -121,6 +134,7 @@ QUnit.test("boolean search ",function(){
 
   deepEqual(Q.docs,[1,4,5,6,7,8,9,10]);
 
+
   var Q=search.newQuery.apply(db,[["mouse","cat","happy"]]);
   Q.load().groupBy('p').search({op:['union','intersect']});  
   deepEqual(Q.docs,[2,4]);  
@@ -140,6 +154,7 @@ QUnit.test("vsm",function() {
   equal(Q.score[0][0]>=1,true); //last one is the highest
   deepEqual(Q.score[1][0]==Q.score[2][0],true);//same query same score
   console.log(JSON.stringify(Q.score));
+  
  
 });
 
