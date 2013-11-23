@@ -330,7 +330,7 @@ var resetPhase=function(opts) {
 	if (this.opts.query!=opts.query) this.phase=0;
 }
 var db_purgeObsoleteQuery=function() {
-	var now=new DateTime();
+	var now=new Date();
 	for (var i in this.querycache) {
 		var diffms=now-this.querycache[i].lastAccess;
 		var diffMins = Math.round(((diffms % 86400000) % 3600000) / 60000); // minutes
@@ -350,37 +350,34 @@ var search=function(opts) {
  	var start=opts.start||0;
 
  	var res={
- 		hitcount:Q.postings.length, 
  		doccount:Q.docs.length,
  		query:opts.query,
  		db:this.filename,
  		opts:opts,
  	};
 	if (O['score']) { //for ranked listing
-		res.score=score.slice(start,start+max);
+		res.score=Q.score.slice(start,start+max);
 		if (O['texts']) {
-			Q.highlightRanked.apply(this);
+			Q.highlightRanked();
 			res.texts=Q.texts;
 		}
 	}
 	if (O['docs']) { //for natural listing
-		res.docs=docs.slice(start,start+max);
+		res.docs=Q.docs.slice(start,start+max);
 		if (O['texts']) {
-			Q.highlightDocs.apply(this);
+			Q.highlightDocs();
 			res.texts=Q.texts;
 		}
 	}
 
-	if (O['postings']) { //for calculating distribution in TOC nodes.
-		res.postings=Q.postings; 
-	}
+
 	if (O['hits']) {//for rendering a text page
 		var startslot=opts.startslot||0;
 		var endslot=opts.endslot||this.meta.slotcount;
 		res.hits=highlight.hitInRange.apply(this,[startslot,endslot]);
 	}
 
-	Q.lastAccess=new DateTime(); 
+	Q.lastAccess=new Date(); 
  	this.querycache[opts.query]=Q;
 	db_purgeObsoleteQuery.call(this);
  	return res;

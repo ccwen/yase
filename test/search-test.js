@@ -2,8 +2,8 @@ console.log(process.cwd())
 var Yase=require('yase');
 var plist=Yase.plist;
 var search=Yase.search;
-
-var db=Yase.use('search-test-db.ydb');
+var DBNAME='search-test-db.ydb';
+var db=Yase.use(DBNAME);
 
 
 QUnit.test("match slot",function() {
@@ -90,7 +90,6 @@ QUnit.test("newQuery 4",function() {
   equal(res.terms[0].key,"a3");
   equal(res.terms[1].key,"a4,b4,c4");
   deepEqual(res.terms[1].tokens,["a4","b4","c4"]);
-  console.log(res.terms)
 });
 
 QUnit.test("load and group query2",function() {
@@ -195,6 +194,13 @@ QUnit.test("highlight",function(){
 QUnit.test("sort phrases",function() {
   var r=search.sortPhrases(['+c','-d','+b','a','-e']);
   deepEqual(r,['a','+b','+c','-d','-e']);
+});
+
+QUnit.test("search",function(){
+  var opts={query:"dog",output:["docs","texts"]};
+  var r=db.search(opts);
+  console.log(r)
+  equal(r.docs.length,5)
 });
 /*
 QUnit.test( "loadterm", function() {

@@ -3,9 +3,14 @@
 	define <hl> in css
 	first phrase is <hl n="0"> , second phrase is <hl n="1"> and so on.
 */
-var getDocText=function(docid) {	
-	var startslot=Math.floor((this.groupposting[docid-1]||0) / this.slotsize);
-	var endslot=Math.floor(this.groupposting[docid]/ this.slotsize);
+var getDocText=function(docid) {
+	if (this.groupunit)	{
+		var startslot=Math.floor((this.groupposting[docid-1]||0) / this.slotsize);
+		var endslot=Math.floor(this.groupposting[docid]/ this.slotsize);
+	} else {
+		startslot=docid;
+		endslot=(docid+1);
+	}
 	if (!endslot) endslot=this.slotcount;
 
 	var r= this.getRange(startslot,endslot);

@@ -1,6 +1,6 @@
 ﻿var fs=require('fs');
 var yase=require('./yase');
-//var search=require('./search');
+
 
 var phraseSearch=function(opts) {
 	var se=yase(opts.db);
@@ -13,9 +13,14 @@ var boolSearch=function(opts) {
 	return res;
 };
 
-var search=function(opts) {
+var search1=function(opts) {
 	var se=yase(opts.db);
 	var res=se[opts.searchtype||'phraseSearch'](opts.tofind,opts);
+	return res;
+}
+var search=function(opts) {
+	var se=yase(opts.db);
+	var res=se.search(opts);
 	return res;
 }
 var buildToc=function(opts) {
@@ -223,7 +228,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,
 	boolSearch:boolSearch,
-	search:search,
+	search:require('./search').search,
 	closestTag:closestTag,
 	findTag:findTag,
 	findTagBySelectors:findTagBySelectors,
