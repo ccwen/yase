@@ -116,11 +116,13 @@ var injectTag=function(opts){
 }
 var highlight=function(opts,type) {
 	opts=opts||{};
+	var docs=opts.docs||this.docs;
+	var score=opts.score||this.score;
 	if (this.phase<3) run.apply(this);
 	if (this.phase>=4) return this;
 	var startdoc=opts.start||this.opts.startdoc || 0;
 	var enddoc=startdoc+ (opts.max||this.opts.max||20);
-	if (enddoc>this.docs.length) enddoc=this.docs.length;
+	if (enddoc>docs.length) enddoc=docs.length;
 	this.texts={};
 	var renderDoc=function(docid) {
 		var res=getDocText.apply(this,[docid]);
@@ -134,9 +136,9 @@ var highlight=function(opts,type) {
 		}		
 	}
 	if (type=='docs') {
-		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[this.docs[i]]);
+		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[docs[i][1]]);
 	} else if (type=='ranked') {
-		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[this.score[i][1]]);
+		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[score[i][1]]);
 	}
 	this.phrase=4;
 	return this;

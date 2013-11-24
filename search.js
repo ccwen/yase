@@ -272,9 +272,12 @@ var newQuery =function(query,opts) {
 	var pc=0;//phrase count
 	for  (var i=0;i<phrases.length;i++) {
 		var op=getOperator(phrases[pc]);
-		operators.push(op);
 		if (op) phrases[pc]=phrases[pc].substring(1);
 
+		/* auto add + for natural order ?*/
+		//if (!opts.rank && op!='exclude' &&i) op='include';
+		operators.push(op);
+		
 		var j=0,tokens=this.customfunc.tokenize.apply(this,[phrases[pc]]);
 		phrase_terms.push(newPhrase());
 		while (j<tokens.length) {
@@ -347,8 +350,8 @@ var search=function(opts) {
 	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);	
-	if (!Q) return;
- 	Q.run();
+	//if (!Q) return;
+ 	Q.run(opts);
  	var output=opts.output, O={}; //output fields
  	if (typeof output==='string') output=[output];
 	for (var i in output) O[output[i]]=true;
@@ -357,22 +360,27 @@ var search=function(opts) {
 
  	var res={
  		doccount:Q.docs.length,
+ 		
  		query:opts.query,
  		db:this.filename,
  		opts:opts,
  	};
-	if (O['score']) { //for ranked listing
-		res.score=Q.score.slice(start,start+max);
-		if (O['texts']) {
-			Q.highlightRanked();
-			res.texts=Q.texts;
-		}
-	}
+ 	if (Q.score && Q.opts.rank) res.scorecount=Q.score.length;
 	if (O['docs']) { //for natural listing
-		res.docs=Q.docs.slice(start,start+max);
-		if (O['texts']) {
-			Q.highlightDocs();
-			res.texts=Q.texts;
+		if (opts.rank) {
+			res.docs=Q.score.slice(start,start+max);
+			if (O['texts']) {
+				Q.highlightRanked({score:res.docs});
+				res.texts=Q.texts;
+			}
+
+		} else {
+			res.docs=Q.docs.slice(start,start+max).map(function(a){return [1,a]});
+			if (O['texts']) {
+				Q.highlightDocs({docs:res.docs});
+				res.texts=Q.texts;
+			}
+
 		}
 	}
 
@@ -381,6 +389,13 @@ var search=function(opts) {
 		var startslot=opts.startslot||0;
 		var endslot=opts.endslot||this.meta.slotcount;
 		res.hits=highlight.hitInRange.apply(this,[startslot,endslot]);
+	}
+	if (O['sourceinfo']) {
+		res.sourceinfo=[];
+		for (var j in res.docs) {
+			res.sourceinfo.push(this.sourceInfo(res.docs[j][1]));
+		}
+		
 	}
 
 	Q.lastAccess=new Date(); 

@@ -7,6 +7,7 @@ var calulateTermsIDFxIDF=function() {
 	for (var i=0;i<this.phrases.length;i++) {
 		var T=this.phrases[i];
 		var idf = Math.log( this.docs.length / T.docs.length );
+		if (!idf) idf=0.0001;
 		T.idf2=idf*idf;
 	}
 	this.IDFready=true;
@@ -37,11 +38,13 @@ var cosineSimilarityQuery = function (d) {
 }
 
 var vsm=function(){
+	var minscore=this.opts.minscore||0.5;
 	calulateTermsIDFxIDF.apply(this);
 	this.score=[];
 	for (var i=0;i<this.docs.length;i++) {
 		var doc=this.docs[i];
 		var sim=cosineSimilarityQuery.apply(this, [doc]);
+		if (sim>minscore)
 		this.score.push([sim,doc]);
 	}
 	this.score.sort(function(a,b){return b[0]-a[0]});
