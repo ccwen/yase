@@ -7,10 +7,13 @@ var isBreaker=function(ch) {
 	var c=ch.charCodeAt(0);
 	return  ( c==0xf0d ||c==0xf0e || c==0x3002 ||  c==0xff1b || ch=='.' || ch=='|') ;
 }
+
 var isSearchableChar=function(c) {
 	var code=c.charCodeAt(0);
 	return ((code>=0x30 && code<=0x39)||(code>=0x41 && code<=0x5a)
-	 || (code>=0x61 && code<=0x7a) || c=='%'); //% for prefix match
+	 || (code>=0x61 && code<=0x7a) || 
+	 (code>=0x30 && code<=0x39)||c=='%'); //% for prefix match
+
 }
 var isSpaceChar=function(c) {
 	return ((c.charCodeAt(0)>=0x2000 && c.charCodeAt(0)<=0x206f) 
@@ -144,7 +147,8 @@ var token2tree=function(tk) {
 	var c=tk.charCodeAt(0);
 	if ((c>=0x41 && c<=0x7a) || c==0xF1 ||
 	  (c>=0x100 && c<=0x24f  ) || (c>=0x1E00 && c<=0x1EFF)) {
-		var T=token2tree_western.apply(this,[this.customfunc.simplifiedToken.apply(this,[tk])]);
+	  	var T=this.customfunc.simplifiedToken?
+			token2tree_western.apply(this,[this.customfunc.simplifiedToken.apply(this,[tk])]):tk;
 	} else {
 		var T=[];
 		T.push( '$'+(c >> 8).toString(16) );
@@ -203,21 +207,20 @@ var expandToken=function(fullpath,path,opts) {
 	
 	for (var i in out1) {
 		var lead=out1[i];
-		var sim=lead;
+		var alias=lead;
 
 		if (path[path.length-1] && prefix!=" ") {
 			lead=lead.substring(0, prefix.length);
 		}
 
-		var leadsim=lead=this.customfunc.normalizeToken.apply(this,[lead]);
-		if (this.customfunc.simplifiedToken) {
-			leadsim=this.customfunc.simplifiedToken.apply(this,[lead]);
-			sim=this.customfunc.simplifiedToken.apply(this,[out1[i]]);
+		var leadalias=lead=this.customfunc.normalizeToken.apply(this,[lead]);
+		if (this.customfunc.searchNormalizeToken) {
+			leadalias=this.customfunc.searchNormalizeToken.apply(this,[lead]);
+			alias=this.customfunc.searchNormalizeToken.apply(this,[out1[i]]);
 		}
 		
-		if (leadsim==prefix || lead==prefix || lead==" " || prefix==" ") {
+		if (leadalias==prefix || lead==prefix || lead==" " || prefix==" ") {
 			//console.log('hit',out1[i])
-
 			var start=0;
 			if (path[path.length-1] && prefix!=" ") start=prefix.length;
 
@@ -225,7 +228,7 @@ var expandToken=function(fullpath,path,opts) {
 			if (path.length<fullpath.length-1 && out1[i]!=" ") {
 
 				if (opts.exact && out1[i]!=fullpath[path.length] &&
-						sim!=fullpath[path.length]) continue;
+						alias!=fullpath[path.length]) continue;
 				
 				path.push(out1[i]);
 				out=out.concat(arguments.callee.apply(this,[fullpath,path,opts]));	
@@ -233,7 +236,7 @@ var expandToken=function(fullpath,path,opts) {
 			} else {
 				if (opts.exact) {
 					if (out1[i]==fullpath[path.length] || 
-							sim==fullpath[path.length]) {
+							alias==fullpath[path.length]) {
 							out.push(path.join("")+out1[i].trim());		
 					}
 				} else {

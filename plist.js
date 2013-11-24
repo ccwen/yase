@@ -276,6 +276,7 @@ var combine=function (postings) {
 }
 
 var unique = function(ar){
+   if (!ar || !ar.length) return;
    var u = {}, a = [];
    for(var i = 0, l = ar.length; i < l; ++i){
     if(u.hasOwnProperty(ar[i])) continue;

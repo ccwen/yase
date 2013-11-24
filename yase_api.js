@@ -5,17 +5,20 @@ var yase=require('./yase');
 var phraseSearch=function(opts) {
 	var se=yase(opts.db);
 	var res=se.phraseSearch(opts.tofind,opts);
+	console.warn('phraseSearch is obsolute')
 	return res;
 };
 var boolSearch=function(opts) {
 	var se=yase(opts.db);
 	var res=se.boolSearch(opts.tofind,opts);
+	console.warn('phraseSearch is obsolute')
 	return res;
 };
 
 var search1=function(opts) {
 	var se=yase(opts.db);
 	var res=se[opts.searchtype||'phraseSearch'](opts.tofind,opts);
+	console.warn('search1 is obsolute')
 	return res;
 }
 var search=function(opts) {
@@ -228,7 +231,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	customfunc:customfunc,
 	phraseSearch:phraseSearch,
 	boolSearch:boolSearch,
-	search:require('./search').search,
+	search:search,
 	closestTag:closestTag,
 	findTag:findTag,
 	findTagBySelectors:findTagBySelectors,

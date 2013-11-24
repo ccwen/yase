@@ -26,13 +26,13 @@ var getTermVariants=function(term,opts) {
 	var expanded=this.customfunc.expandToken.apply(this, [ tree,[],opts ]);
 	var simplified=[],lengths=[];
 	if (this.customfunc.simplifiedToken) {
-		for (var i=0;i<expanded.length;i++) {
+		for (var i in expanded) {
 			simplified.push(this.customfunc.simplifiedToken(expanded[i]));
 		}
 	} else simplified=expanded;
 
 	if (opts.getlengths) {
-		for (var i=0;i<expanded.length;i++) {
+		for (var i in expanded) {
 			var postings=this.getPosting(expanded[i]);
 			if (postings) lengths.push(postings.length);
 			else lengths.push(0)			
@@ -89,23 +89,28 @@ var parseTerm = function(raw,opts) {
 var loadTerm=function() {
 	var db=this.db, cache=db.postingcache;
 	var terms=this.terms;
-	for (var i in this.terms) {
-		var key=terms[i].key;
-		if (cache[key]) terms[i].posting=cache[key];
-		if (!terms[i].posting && terms[i].op!='wildcard') {
-			if (terms[i].tokens && terms[i].tokens.length) { //term expands to multiple tokens
-				var postings=[];
-				for (var j in terms[i].tokens) {
-					var posting=db.getPosting(terms[i].tokens[j]);
-					postings.push(posting);
-				}
-				terms[i].posting=plist.combine(postings);
-			} else { //term == token
-				terms[i].posting=db.getPosting(key);
-			}
-			cache[key]=terms[i].posting;
+	this.terms.forEach(function(T){
+		var key=T.key;
+		if (cache[key]) T.posting=cache[key];
+		if (db.customfunc.expandToken && T.op!='exact') {
+			var tree=db.customfunc.token2tree.apply(db,[key]);
+			var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
+			if (expanded) T.tokens=plist.unique(T.tokens.concat(expanded));
 		}
-	}
+		if (!T.posting && T.op!='wildcard') {
+			if (T.tokens && T.tokens.length) { //term expands to multiple tokens
+				var postings=[];
+				T.tokens.forEach(function(TK){
+					var posting=db.getPosting(TK);
+					postings.push(posting);
+				});
+				T.posting=plist.combine(postings);
+			} else { //term == token
+				T.posting=db.getPosting(key);
+			}
+			cache[key]=T.posting;
+		}
+	});
 
 }
 var loadPhrase=function(phrase) {
@@ -153,9 +158,8 @@ var loadPhrase=function(phrase) {
 var load=function() {
 	loadTerm.apply(this);
 	var phrases=this.phrases;
-	for (var i in phrases) {
-		loadPhrase.apply(this,[phrases[i]]);
-	}
+	var that=this;
+	phrases.forEach(loadPhrase.bind(this));
 	this.phase=1;
 	return this;
 }
@@ -182,19 +186,20 @@ var groupBy=function(gu) {
 		matchfunc=matchPosting;
 	}
 	this.groupunit=gu;
-	for (var i in phrases) {
-		var key=phrases[i].key;
+	var that=this;
+	phrases.forEach(function(P){
+		var key=P.key;
 		var docfreq=docfreqcache[key];
 		if (!docfreq) docfreq=docfreqcache[key]={};
-		if (!docfreq[this.groupunit]) {
-			docfreq[this.groupunit]={doclist:null,freq:null};
+		if (!docfreq[that.groupunit]) {
+			docfreq[that.groupunit]={doclist:null,freq:null};
 		}		
-		if (!phrases[i].posting) continue;
-		var res=matchfunc.apply(this,[phrases[i].posting]);;
-		phrases[i].freq=res.freq;
-		phrases[i].docs=res.docs;
-		docfreq[this.groupunit]={doclist:phrases[i].docs,freq:phrases[i].freq};
-	}
+		if (!P.posting) return;
+		var res=matchfunc.apply(that,[P.posting]);;
+		P.freq=res.freq;
+		P.docs=res.docs;
+		docfreq[that.groupunit]={doclist:P.docs,freq:P.freq};
+	});
 	this.phase=2;
 	return this;
 }
@@ -254,6 +259,7 @@ var getOperator=function(raw) {
 }
 var QUERYSYNTAX={google:querysyntax_google};
 var newQuery =function(query,opts) {
+	if (!query) return;
 	opts=opts||{};
 
 	var phrases=query;
@@ -341,7 +347,7 @@ var search=function(opts) {
 	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);	
-	
+	if (!Q) return;
  	Q.run();
  	var output=opts.output, O={}; //output fields
  	if (typeof output==='string') output=[output];

@@ -360,9 +360,7 @@ var yase_use = function(fn,opts) {
 		instance.fetchPage=fetchPage;
 		instance.getTextByTag=getTextByTag;
 		instance.search=search.search;
-		instance.phraseSearch=search1.phraseSearch;
-		instance.boolSearch=search1.boolSearch;
-		instance.renderhits=search1.renderhits;
+
 		instance.getPosting=getPosting;
 		instance.closestTag=closestTag;
 		instance.sourceInfo=sourceInfo;
@@ -387,6 +385,12 @@ var yase_use = function(fn,opts) {
 		instance.expandToken=search1.expandToken;
 		instance.newQuery=search.newQuery;
 		instance.getdb=function() {return db};
+
+		/* old interface */
+		instance.phraseSearch=search1.phraseSearch;
+		instance.boolSearch=search1.boolSearch;
+		instance.renderhits=search1.renderhits;
+		
 	}
 
 	if (fn) {

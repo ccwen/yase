@@ -86,6 +86,7 @@ var boolSearch=function(opts) {
 		r=OPERATION[op](r,this.phrases[i].docs);
 	}
 	this.docs=plist.unique(r);
+  if (!this.docs) this.docs=[];
 	return this;
 }
 module.exports={search:boolSearch}
