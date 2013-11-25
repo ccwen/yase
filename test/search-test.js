@@ -30,7 +30,14 @@ QUnit.test("newQuery 1",function() {
   equal(res.terms[3].exclude,true);
 
 });
-
+QUnit.test("cat cat",function(){
+  var Q=search.newQuery.apply(db,['"cat cat"']);
+  Q.run();
+  equal(Q.terms.length,1);
+  equal(Q.docs.length,1);
+  equal(Q.phrases.length,1);
+  equal(Q.phrases[0].termid.length,2);
+})
 QUnit.test("ignore leading and ending wildcard",function() {
   var res=search.newQuery.apply(db,['"3* abc"']);
   deepEqual(res.phrases[0].termid,[0]);
@@ -145,19 +152,19 @@ QUnit.test("a dog",function() {
 
 QUnit.test("boolean search ",function(){
   var Q=search.newQuery.apply(db,["+cat +kitty"]);
-  Q.load().groupBy('p').run();
+  Q.load().groupBy('p').slice();
 
   deepEqual(Q.docs,[1,10]);
 
   var Q=search.newQuery.apply(db,["cat cow"]);
-  Q.load().groupBy('p').run();
+  Q.load().groupBy('p').slice();
 
-  deepEqual(Q.docs,[1,4,5,6,7,8,9,10]);
+  deepEqual(Q.docs,[1,4,5,6,7,8,9,10,11]);
 
   var Q=search.newQuery.apply(db,["cat -cow"]);
   Q.load().groupBy('p').run();
 
-  deepEqual(Q.docs,[1,4,7,8,9,10]);
+  deepEqual(Q.docs,[1,4,7,8,9,10,11]);
 
 
   var Q=search.newQuery.apply(db,["mouse cat +happy"]);
@@ -180,13 +187,12 @@ QUnit.test("vsm",function() {
   deepEqual(Q.score[1][0]==Q.score[2][0],true);//same query same score
   console.log(JSON.stringify(Q.score));
 
- 
 });
 
 QUnit.test("highlight",function(){
   var Q=search.newQuery.apply(db,["fish dog cat",
    {groupunit:'p'}]);
-  Q.run().highlightDocs();
+  Q.run().highlight();
   equal(Q.texts['10'],'<p>\n<hl n="2">cat </hl><hl n="0">fish </hl><hl n="1">dog </hl>kitty\n</p>\n');
 });
 
@@ -197,11 +203,13 @@ QUnit.test("sort phrases",function() {
 });
 
 QUnit.test("search",function(){
-  var opts={query:"dog",output:["docs","texts"]};
+  var opts={query:"dog",output:["match","texts"]};
   var r=db.search(opts);
   console.log(r)
-  equal(r.docs.length,5)
+  equal(r.matched.length,5)
 });
+
+
 /*
 QUnit.test( "loadterm", function() {
   var res=search.loadTerm.apply(db,["a"]);

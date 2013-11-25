@@ -78,11 +78,13 @@ var union=function(a,b) {
 var OPERATION={'include':intersect, 'union':union, 'exclude':subtract};
 
 var boolSearch=function(opts) {
+  opts=opts||{};
+  ops=opts.op||this.opts.op;
 	if (!this.phrases.length) return;
 	var r=this.phrases[0].docs;
   /* ignore operator of first phrase */
 	for (var i=1;i<this.phrases.length;i++) {
-		var op= opts.op[i] || 'union';
+		var op= ops[i] || 'union';
 		r=OPERATION[op](r,this.phrases[i].docs);
 	}
 	this.docs=plist.unique(r);

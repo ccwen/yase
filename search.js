@@ -92,7 +92,7 @@ var loadTerm=function() {
 	this.terms.forEach(function(T){
 		var key=T.key;
 		if (cache[key]) T.posting=cache[key];
-		if (db.customfunc.expandToken && T.op!='exact') {
+		if (db.customfunc.expandToken && T.op!='exact'  && T.op!='wildcard') {
 			var tree=db.customfunc.token2tree.apply(db,[key]);
 			var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
 			if (expanded) T.tokens=plist.unique(T.tokens.concat(expanded));
@@ -226,19 +226,36 @@ var orTerms=function(tokens,now) {
 
 var RANK={'vsm':rankvsm};
 var run=function(opts) {
+	if (!opts) opts=this.opts;
 	if (this.phase<2) groupBy.apply(this);
 	if (this.phase>=3) return this;
-	for (var i in opts) this.opts[i]=opts[i];
 	
-	boolsearch.search.apply(this,[this.opts]);
-	if (this.opts.rank ){
-		var rankmodel=RANK[this.opts.rank];
+	boolsearch.search.apply(this,[opts]);
+	if (opts.rank ){
+		var rankmodel=RANK[opts.rank];
 		if (rankmodel) {
 			rankmodel.rank.apply(this);
 		}
 	}
 	this.phase=3;
 	return this;
+}
+var slice=function(opts) {
+	if (!opts) opts=this.opts;
+	if (this.phase<3) run.apply(this,[opts]);
+	if (this.phase>=4) return this;
+
+	var max=opts.max||this.opts.max||20; 
+ 	var start=opts.start||this.opts.start||0;
+ 	var mode=opts.rank||this.opts.rank;
+ 	if (mode=='vsm') {
+ 		this.matched=this.score.slice(start,start+max);
+ 	} else {
+ 		this.matched=this.docs.slice(start,start+max).map(function(a){return [1,a]});;
+ 	}
+ 	this.phase=4;
+ 	return this;
+ 	
 }
 // sequance : load.groupBy.trim.search.rank.highlight
 var sortPhrases=function(query) {
@@ -269,7 +286,7 @@ var newQuery =function(query,opts) {
 	}
 	
 	var phrase_terms=[], terms=[],variants=[],termcount=0,operators=[];
-	var pc=0;//phrase count
+	var pc=0,termid=0;//phrase count
 	for  (var i=0;i<phrases.length;i++) {
 		var op=getOperator(phrases[pc]);
 		if (op) phrases[pc]=phrases[pc].substring(1);
@@ -288,14 +305,21 @@ var newQuery =function(query,opts) {
 					continue;
 				}
 				terms.push(parseWildcard.apply(this,[raw]));
+				termid=termcount++;
 			} else if (isOrTerm(raw)){
 				var term=orTerms.apply(this,[tokens,j]);
 				terms.push(term);
 				j+=term.key.split(',').length-1;
+				termid=termcount++;
 			} else {
-				terms.push(parseTerm.apply(this,[raw]));
+				var term=parseTerm.apply(this,[raw]);
+				termid=terms.map(function(a){return a.key}).indexOf(term.key);
+				if (termid==-1) {
+					terms.push(term);
+					termid=termcount++;
+				};
 			}
-			phrase_terms[pc].termid.push(termcount++);
+			phrase_terms[pc].termid.push(termid);
 			j++;
 		}
 		phrase_terms[pc].key=phrases[pc];
@@ -318,9 +342,9 @@ var newQuery =function(query,opts) {
 		db:this,opts:opts,query:query,phrases:phrase_terms,terms:terms,groupunit:'',
 		load:load,groupBy:groupBy,run:run,
 		getPhraseWidth:highlight.getPhraseWidth,
-		highlightDocs:highlight.highlightDocs,
-		highlightRanked:highlight.highlightRanked,
+		highlight:highlight.highlight,
 		termFrequency:termFrequency,
+		slice:slice,
 		indexOfSorted:plist.indexOfSorted,phase:0,
 	};
 	Q.slotsize=Math.pow(2,this.meta.slotshift);
@@ -334,6 +358,7 @@ var newQuery =function(query,opts) {
 }
 /* the main entrace */
 var resetPhase=function(opts) {
+	if (this.opts.start!=opts.start || this.opts.max!=opts.max ) this.phase=3;
 	if (this.opts.rank!=opts.rank) this.phase=2;
 	if (this.opts.groupunit!=opts.groupunit) this.phase=1;
 	if (this.opts.query!=opts.query) this.phase=0;
@@ -346,44 +371,33 @@ var db_purgeObsoleteQuery=function() {
 		if (diffMins>30) delete this.querycache[i];
 	}
 }
+
 var search=function(opts) {	
 	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
-	else resetPhase.apply(Q,[opts]);	
-	//if (!Q) return;
- 	Q.run(opts);
+	else resetPhase.apply(Q,[opts]);
+	if (!Q || Q.phase==5) return;
+	for (var i in opts) Q.opts[i]=opts[i]; //use new options
+
+ 	Q.slice(opts);
  	var output=opts.output, O={}; //output fields
  	if (typeof output==='string') output=[output];
 	for (var i in output) O[output[i]]=true;
-	var max=opts.max||20; 
- 	var start=opts.start||0;
 
  	var res={
  		doccount:Q.docs.length,
- 		
  		query:opts.query,
  		db:this.filename,
  		opts:opts,
  	};
  	if (Q.score && Q.opts.rank) res.scorecount=Q.score.length;
-	if (O['docs']) { //for natural listing
-		if (opts.rank) {
-			res.docs=Q.score.slice(start,start+max);
-			if (O['texts']) {
-				Q.highlightRanked({score:res.docs});
-				res.texts=Q.texts;
-			}
-
-		} else {
-			res.docs=Q.docs.slice(start,start+max).map(function(a){return [1,a]});
-			if (O['texts']) {
-				Q.highlightDocs({docs:res.docs});
-				res.texts=Q.texts;
-			}
-
+	if (O['match']) {
+		res.matched=Q.matched;
+		if (O['texts']) {
+			Q.highlight();
+			res.texts=Q.texts;
 		}
 	}
-
 
 	if (O['hits']) {//for rendering a text page
 		var startslot=opts.startslot||0;
@@ -392,11 +406,12 @@ var search=function(opts) {
 	}
 	if (O['sourceinfo']) {
 		res.sourceinfo=[];
-		for (var j in res.docs) {
-			res.sourceinfo.push(this.sourceInfo(res.docs[j][1]));
+		for (var j in res.matched) {
+			res.sourceinfo.push(this.sourceInfo(res.matched[j][1]));
 		}
-		
 	}
+
+	
 
 	Q.lastAccess=new Date(); 
  	this.querycache[opts.query]=Q;
@@ -406,6 +421,7 @@ var search=function(opts) {
 
 module.exports={
 	search:search,
+
 	newQuery:newQuery,//remove this...
 	sortPhrases:sortPhrases, //just for testing, should be able to remove
 	getTermVariants:getTermVariants //this is needed by Pali terms

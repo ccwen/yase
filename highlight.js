@@ -116,15 +116,13 @@ var injectTag=function(opts){
 }
 var highlight=function(opts,type) {
 	opts=opts||{};
-	var docs=opts.docs||this.docs;
-	var score=opts.score||this.score;
-	if (this.phase<3) run.apply(this);
-	if (this.phase>=4) return this;
-	var startdoc=opts.start||this.opts.startdoc || 0;
-	var enddoc=startdoc+ (opts.max||this.opts.max||20);
-	if (enddoc>docs.length) enddoc=docs.length;
+
+	if (this.phase<4) this.slice.apply(this,[opts]);
+	if (this.phase>=5) return this;
 	this.texts={};
-	var renderDoc=function(docid) {
+	var matched=this.matched;
+	var renderDoc=function(D) {
+		var docid=D[1];
 		var res=getDocText.apply(this,[docid]);
 		if (!this.texts[docid]) {
 			var opt={textarr:res.text,
@@ -135,23 +133,13 @@ var highlight=function(opts,type) {
 			this.texts[docid]=injectTag.apply(this,[opt]);
 		}		
 	}
-	if (type=='docs') {
-		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[docs[i][1]]);
-	} else if (type=='ranked') {
-		for (var i=startdoc;i<enddoc;i++) renderDoc.apply(this,[score[i][1]]);
-	}
-	this.phrase=4;
+	matched.forEach(renderDoc.bind(this));
+	this.phase=5;
 	return this;
 }
-var highlightDocs=function(opts) {
-	return highlight.apply(this,[opts,'docs']);
-}
-var highlightRanked=function(opts) {
-	return highlight.apply(this,[opts,'ranked']);
-}
+
 module.exports={
-	highlightDocs:highlightDocs,
-	highlightRanked:highlightRanked,
+	highlight:highlight,
 	injectTag:injectTag,
 	hitInRange:hitInRange,
 	getPhraseWidth:getPhraseWidth
