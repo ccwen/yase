@@ -175,6 +175,7 @@ var packmeta=function(options,context,output) {
 	if (options.linkto) meta.linkto=options.linkto;
 	if (options.author) meta.author=options.author;
 	if (options.url) meta.url=options.url;
+	if (options.groupunit) meta.groupunit=options.groupunit;
 	if (options.min_yase_version) meta.min_yase_version=options.min_yase_version;
 	meta.builddatetime=(new Date()).toString();
 	meta.buildduration=new Date()-context.starttime;

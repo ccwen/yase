@@ -172,7 +172,11 @@ var matchPosting=function(pl) {
 var groupBy=function(gu) {
 	if (this.phase<1) this.load();
 	if (this.phase>=2) return this;
-	gu=gu||this.opts.groupunit||'';
+	var defaultgroupunit=this.db.meta.groupunit;
+	if (defaultgroupunit instanceof Array) {
+		defaultgroupunit=defaultgroupunit[0];
+	}
+	gu=gu||this.opts.groupunit||defaultgroupunit||'';
 	var db=this.db,terms=this.terms,phrases=this.phrases;
 	var docfreqcache=this.db.docfreqcache;
 	var matchfunc=matchSlot;
@@ -274,6 +278,15 @@ var getOperator=function(raw) {
 	if (raw[0]=='-') op='exclude';
 	return op;
 }
+var doc2slot=function(docid) {
+	var slot=0;
+	if (this.groupunit)	{
+		slot=Math.floor((this.groupposting[docid-1]||0) / this.slotsize);
+	} else {
+		startslot=docid;
+	}
+	return slot;
+}
 var QUERYSYNTAX={google:querysyntax_google};
 var newQuery =function(query,opts) {
 	if (!query) return;
@@ -345,6 +358,7 @@ var newQuery =function(query,opts) {
 		highlight:highlight.highlight,
 		termFrequency:termFrequency,
 		slice:slice,
+		doc2slot:doc2slot,
 		indexOfSorted:plist.indexOfSorted,phase:0,
 	};
 	Q.slotsize=Math.pow(2,this.meta.slotshift);
@@ -407,7 +421,8 @@ var search=function(opts) {
 	if (O['sourceinfo']) {
 		res.sourceinfo=[];
 		for (var j in res.matched) {
-			res.sourceinfo.push(this.sourceInfo(res.matched[j][1]));
+			var slot=Q.doc2slot(res.matched[j][1]);
+			res.sourceinfo.push(this.sourceInfo(slot));
 		}
 	}
 

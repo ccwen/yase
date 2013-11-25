@@ -17,11 +17,16 @@ var getDocText=function(docid) {
 	var text=[];
 	//dirty hack, should get endtag from posting
 	var endtag='</'+this.groupunit+'>';
+	var last=0;
 	for (var i in r) {
 		var t=r[i].text;
 		text.push(t);
-		if (t.indexOf(endtag)>-1) break;
+		if (t.indexOf(endtag)>-1) last=text.length-1;
 	}
+	if (last) {
+		text=text.slice(0,last);
+	}
+
 	return {text:text, start:startslot, end:endslot};
 }
 
@@ -75,7 +80,7 @@ var hitInRange=function(startslot,endslot) {
 var injectTag=function(opts){
 	var hits=opts.hits;
 	var tag=opts.tag||'hl';
-	var output='';
+	var output='',j=0;;
 	for (var t=0;t<opts.textarr.length;t++) {
 		var voff=(opts.startslot+t)*this.slotsize;
 		if (j<hits.length && hits[j][0]>voff+this.slotsize) { //this slot has no hits
@@ -85,7 +90,7 @@ var injectTag=function(opts){
 		}
 
 		var tokens=this.tokenize(opts.textarr[t]);
-		var i=0,j=0;
+		var i=0;
 		while (i<tokens.length && tokens[i][0]=='<') output+=tokens[i++];
 		while (i<tokens.length) {
 			if (j<hits.length && voff==hits[j][0]) {
@@ -114,7 +119,7 @@ var injectTag=function(opts){
 	}
 	return output;
 }
-var highlight=function(opts,type) {
+var highlight=function(opts) {
 	opts=opts||{};
 
 	if (this.phase<4) this.slice.apply(this,[opts]);
