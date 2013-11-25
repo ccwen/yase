@@ -422,12 +422,15 @@ var search=function(opts) {
 		res.sourceinfo=[];
 		for (var j in res.matched) {
 			var slot=Q.doc2slot(res.matched[j][1]);
-			res.sourceinfo.push(this.sourceInfo(slot));
+			var lastslot=Q.doc2slot(res.matched[j][1]+1);
+			var si=this.sourceInfo(slot);
+			si.slot=slot;
+			si.lastslot=lastslot;
+			res.sourceinfo.push(si);
 		}
 	}
 
 	
-
 	Q.lastAccess=new Date(); 
  	this.querycache[opts.query]=Q;
 	db_purgeObsoleteQuery.call(this);

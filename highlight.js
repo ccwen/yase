@@ -82,9 +82,12 @@ var injectTag=function(opts){
 	var tag=opts.tag||'hl';
 	var output='',j=0;;
 	for (var t=0;t<opts.textarr.length;t++) {
-		var voff=(opts.startslot+t)*this.slotsize;
+		var slot=opts.startslot+t;
+		var voff=slot*this.slotsize;
 		if (j<hits.length && hits[j][0]>voff+this.slotsize) { //this slot has no hits
-			if (opts.abridged ) output+=opts.abridged; // ...
+			if (opts.abridged ) {
+				output+=opts.abridged.replace(/\$slot/g,slot); // ...
+			}
 			else output+=opts.textarr[t]; //output as it is
 			continue;
 		}
@@ -94,7 +97,7 @@ var injectTag=function(opts){
 		while (i<tokens.length && tokens[i][0]=='<') output+=tokens[i++];
 		while (i<tokens.length) {
 			if (j<hits.length && voff==hits[j][0]) {
-				var nphrase=hits[j][1], width=hits[j][2];
+				var nphrase=hits[j][1] % 10, width=hits[j][2];
 				var tag=hits[j][3] || tag;
 				if (width) {
 					output+= '<'+tag+' n="'+nphrase+'">';
