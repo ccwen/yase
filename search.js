@@ -170,13 +170,11 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting);
 }
 var groupBy=function(gu) {
+	gu=gu||this.opts.groupunit||defaultgroupunit||'';
+
 	if (this.phase<1) this.load();
 	if (this.phase>=2) return this;
-	var defaultgroupunit=this.db.meta.groupunit;
-	if (defaultgroupunit instanceof Array) {
-		defaultgroupunit=defaultgroupunit[0];
-	}
-	gu=gu||this.opts.groupunit||defaultgroupunit||'';
+
 	var db=this.db,terms=this.terms,phrases=this.phrases;
 	var docfreqcache=this.db.docfreqcache;
 	var matchfunc=matchSlot;
@@ -391,6 +389,13 @@ var search=function(opts) {
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);
 	if (!Q || Q.phase==5) return;
+
+	var defaultgroupunit=this.meta.groupunit||"";
+	if (defaultgroupunit instanceof Array) {
+		defaultgroupunit=defaultgroupunit[0];
+	}
+	opts.groupunit=defaultgroupunit;
+
 	for (var i in opts) Q.opts[i]=opts[i]; //use new options
 
  	Q.slice(opts);
