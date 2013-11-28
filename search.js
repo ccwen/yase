@@ -422,7 +422,7 @@ var search=function(opts) {
 
  	for (var i=0;i<Q.matched.length;i++) {
  		var r={id:Q.matched[i][1],score:Q.matched[i][0]};
- 		if (O["text"]) r.text=Q.texts[i];
+ 		if (O["text"]) r.text=Q.texts[r.id];
 		if (O['sourceinfo']) {
 			var slot=Q.doc2slot(Q.matched[j][1]);
 			var lastslot=Q.doc2slot(Q.matched[j][1]+1);
@@ -430,6 +430,7 @@ var search=function(opts) {
 			r.slot=slot;
 			r.lastslot=lastslot;
 		}
+		R.result.push(r)
 	}	
 
 	if (O["hits"]) {
