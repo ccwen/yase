@@ -26,6 +26,11 @@ var search=function(opts) {
 	var res=se.search(opts);
 	return res;
 }
+var getTermVariants=function(opts) {
+	var se=yase(opts.db);
+	var res=se.getTermVariants(opts.term,opts);
+	return res;	
+}
 var buildToc=function(opts) {
 	var se=yase(opts.db);
 	var res=se.buildToc(opts.toc,opts);
@@ -232,6 +237,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	phraseSearch:phraseSearch,
 	boolSearch:boolSearch,
 	search:search,
+	getTermVariants:getTermVariants,
 	closestTag:closestTag,
 	findTag:findTag,
 	findTagBySelectors:findTagBySelectors,

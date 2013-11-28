@@ -20,27 +20,28 @@ var querysyntax_google=require('./querysyntax_google');
 var getTermVariants=function(term,opts) {
 	opts=opts||{};
 	opts.max=opts.max||100;
-	var count=0;
 	var out=[];
 	var tree=this.customfunc.token2tree.apply(this,[term]);
 	var expanded=this.customfunc.expandToken.apply(this, [ tree,[],opts ]);
-	var simplified=[],lengths=[];
-	if (this.customfunc.simplifiedToken) {
-		for (var i in expanded) {
-			simplified.push(this.customfunc.simplifiedToken(expanded[i]));
-		}
-	} else simplified=expanded;
 
-	if (opts.getlengths) {
-		for (var i in expanded) {
-			var postings=this.getPosting(expanded[i]);
-			if (postings) lengths.push(postings.length);
-			else lengths.push(0)			
-		}
+	var createTermObject=function() {
+		var res={text:'',};
+		if (this.customfunc.simplifiedToken) res.simplified='';
+		if (opts.hit) res.hit=0;
+		return res;
 	}
-	return { expanded:expanded ,simplified:simplified, 
-		lengths: lengths, 
-		more: expanded.length>=opts.max};
+	for (var i in expanded) {
+		var o=createTermObject.call(this);
+		o.simplified=this.customfunc.simplifiedToken(expanded[i]);
+		o.text=expanded[i];
+		if (opts.hit) {
+			var postings=this.getPosting(expanded[i]);
+			if (postings) o.hit=postings.length;
+			else o.hit=0;			
+		}
+		out.push(o);
+	}
+	return { variants:out,	more: expanded.length>=opts.max};
 }
 
 var termFrequency=function(nterm,ndoc) {
@@ -63,7 +64,7 @@ var parseWildcard=function(raw) {
 	return {wildcard:type, width: n , op:'wildcard'};
 }
 var parseTerm = function(raw,opts) {
-	var res={raw:raw,tokens:[],term:'',op:''};
+	var res={raw:raw,variants:[],term:'',op:''};
 	var term=raw, op=0;
 	var firstchar=term[0];
 	if (firstchar=='-') {
@@ -75,7 +76,7 @@ var parseTerm = function(raw,opts) {
 	var lastchar=term[term.length-1];
 	
 	if (lastchar=='%') {
-		res.tokens=getTermVariants.apply(this,[term.substring(0,term.length-1)]).expanded;
+		res.variants=getTermVariants.apply(this,[term.substring(0,term.length-1)]).variants;
 		res.op='prefix'
 	} else if (lastchar=='^') {
 		term=term.substring(0,term.length-1);
@@ -95,13 +96,13 @@ var loadTerm=function() {
 		if (db.customfunc.expandToken && T.op!='exact'  && T.op!='wildcard') {
 			var tree=db.customfunc.token2tree.apply(db,[key]);
 			var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
-			if (expanded) T.tokens=plist.unique(T.tokens.concat(expanded));
+			for (var i in expanded) T.variants.push({text:expanded[i]});
 		}
 		if (!T.posting && T.op!='wildcard') {
-			if (T.tokens && T.tokens.length) { //term expands to multiple tokens
+			if (T.variants && T.variants.length) { //term expands to multiple tokens
 				var postings=[];
-				T.tokens.forEach(function(TK){
-					var posting=db.getPosting(TK);
+				T.variants.forEach(function(TK){
+					var posting=db.getPosting(TK.text);
 					postings.push(posting);
 				});
 				T.posting=plist.combine(postings);
@@ -170,7 +171,7 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting);
 }
 var groupBy=function(gu) {
-	gu=gu||this.opts.groupunit||defaultgroupunit||'';
+	gu=gu||this.opts.groupunit||'';
 
 	if (this.phase<1) this.load();
 	if (this.phase>=2) return this;
@@ -212,15 +213,24 @@ var isOrTerm=function(term) {
 	term=term.trim();
 	return (term[term.length-1]===',');
 }
+var orterm=function(term,key) {
+		var t={text:key};
+		if (this.customfunc.simplifiedToken) {
+			t.simplified=this.customfunc.simplifiedToken(key);
+		}
+		term.variants.push(t);
+}
 var orTerms=function(tokens,now) {
 	var raw=tokens[now];
 	var term=parseTerm.apply(this,[raw]);
-	term.tokens.push(term.key);
+  orterm.apply(this,[term,term.key]);
 	while (isOrTerm(raw))  {
 		raw=tokens[++now];
 		var term2=parseTerm.apply(this,[raw]);
-		term2.tokens.push(term2.key);
-		term.tokens=term.tokens.concat(term2.tokens);
+		orterm.apply(this,[term,term2.key]);
+		for (var i in term2.variants){
+			term.variants[i]=term2.variants[i];
+		}
 		term.key+=','+term2.key;
 	}
 	return term;
@@ -385,10 +395,11 @@ var db_purgeObsoleteQuery=function() {
 }
 
 var search=function(opts) {	
+	var R={query:opts.query,opts:opts,db:this.filename,result:[]};
 	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);
-	if (!Q || Q.phase==5) return;
+	if (!Q || Q.phase==5) return R;
 
 	var defaultgroupunit=this.meta.groupunit||"";
 	if (defaultgroupunit instanceof Array) {
@@ -403,43 +414,35 @@ var search=function(opts) {
  	if (typeof output==='string') output=[output];
 	for (var i in output) O[output[i]]=true;
 
- 	var res={
- 		doccount:Q.docs.length,
- 		query:opts.query,
- 		db:this.filename,
- 		opts:opts,
- 	};
- 	if (Q.score && Q.opts.rank) res.scorecount=Q.score.length;
-	if (O['match']) {
-		res.matched=Q.matched;
-		if (O['texts']) {
-			Q.highlight();
-			res.texts=Q.texts;
-		}
-	}
 
-	if (O['hits']) {//for rendering a text page
+ 	R.doccount=Q.docs.length;
+ 	if (Q.score && Q.opts.rank) R.scorecount=Q.score.length;
+
+ 	if (O["text"]) Q.highlight();
+
+ 	for (var i=0;i<Q.matched.length;i++) {
+ 		var r={id:Q.matched[i][1],score:Q.matched[i][0]};
+ 		if (O["text"]) r.text=Q.texts[i];
+		if (O['sourceinfo']) {
+			var slot=Q.doc2slot(Q.matched[j][1]);
+			var lastslot=Q.doc2slot(Q.matched[j][1]+1);
+			var si=this.sourceInfo(slot);
+			r.slot=slot;
+			r.lastslot=lastslot;
+		}
+	}	
+
+	if (O["hits"]) {
 		var startslot=opts.startslot||0;
 		var endslot=opts.endslot||this.meta.slotcount;
-		res.hits=highlight.hitInRange.apply(this,[startslot,endslot]);
-	}
-	if (O['sourceinfo']) {
-		res.sourceinfo=[];
-		for (var j in res.matched) {
-			var slot=Q.doc2slot(res.matched[j][1]);
-			var lastslot=Q.doc2slot(res.matched[j][1]+1);
-			var si=this.sourceInfo(slot);
-			si.slot=slot;
-			si.lastslot=lastslot;
-			res.sourceinfo.push(si);
-		}
+		R.hits=highlight.hitInRange.apply(this,[startslot,endslot]); 			
 	}
 
-	
+ 	
 	Q.lastAccess=new Date(); 
  	this.querycache[opts.query]=Q;
 	db_purgeObsoleteQuery.call(this);
- 	return res;
+ 	return R;
 }
 
 module.exports={

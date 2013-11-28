@@ -382,7 +382,7 @@ var yase_use = function(fn,opts) {
 		instance.yaseloaded=true;
 		instance.filename=fn;
 
-		instance.expandToken=search1.expandToken;
+		instance.getTermVariants=search.getTermVariants;
 		instance.newQuery=search.newQuery;
 		instance.getdb=function() {return db};
 

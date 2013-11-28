@@ -66,13 +66,13 @@ QUnit.test("newQuery 2",function() {
   deepEqual(res.phrases[1].termid,[1,2]);
   equal(res.terms[0].key,"e%");
   equal(res.terms[1].key,"b5");
-  deepEqual(res.terms[1].tokens,[]);
+  deepEqual(res.terms[1].variants,[]);
 
   equal(res.terms[2].key,"b6");
-  deepEqual(res.terms[2].tokens,[]);
+  deepEqual(res.terms[2].variants,[]);
 
-  deepEqual(res.terms[0].tokens,["e1","e2","e3"]);
-
+  deepEqual(res.terms[0].variants.map(function(a){return a.text}),
+    ["e1","e2","e3"]);
   
 });
 
@@ -96,7 +96,7 @@ QUnit.test("newQuery 4",function() {
   equal(res.terms.length,2);
   equal(res.terms[0].key,"a3");
   equal(res.terms[1].key,"a4,b4,c4");
-  deepEqual(res.terms[1].tokens,["a4","b4","c4"]);
+  deepEqual(res.terms[1].variants.map(function(a){return a.text}),["a4","b4","c4"]);
 });
 
 QUnit.test("load and group query2",function() {
@@ -206,7 +206,7 @@ QUnit.test("vsm",function() {
 
 
 QUnit.test("search",function(){
-  var opts={query:"fish dog",rank:"vsm",output:["match","texts"]};
+  var opts={query:"fish dog",rank:"vsm",output:["text"]};
   var r=db.search(opts);
   console.log(r)
   equal(true,true)
