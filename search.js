@@ -395,7 +395,7 @@ var db_purgeObsoleteQuery=function() {
 }
 
 var search=function(opts) {	
-	var R={query:opts.query,opts:opts,db:this.filename,result:[]};
+	var R={query:opts.query,opts:opts,db:this.filename,result:[],doccount:0};
 	var Q=this.querycache[opts.query];
 	if (!Q) Q=newQuery.apply(this,[opts.query,opts]);
 	else resetPhase.apply(Q,[opts]);
@@ -424,8 +424,8 @@ var search=function(opts) {
  		var r={id:Q.matched[i][1],score:Q.matched[i][0]};
  		if (O["text"]) r.text=Q.texts[r.id];
 		if (O['sourceinfo']) {
-			var slot=Q.doc2slot(Q.matched[j][1]);
-			var lastslot=Q.doc2slot(Q.matched[j][1]+1);
+			var slot=Q.doc2slot(r.id);
+			var lastslot=Q.doc2slot(r.id+1);
 			var si=this.sourceInfo(slot);
 			r.slot=slot;
 			r.lastslot=lastslot;
