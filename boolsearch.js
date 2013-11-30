@@ -80,6 +80,7 @@ var OPERATION={'include':intersect, 'union':union, 'exclude':subtract};
 var boolSearch=function(opts) {
   opts=opts||{};
   ops=opts.op||this.opts.op;
+  this.docs=[];
 	if (!this.phrases.length) return;
 	var r=this.phrases[0].docs;
   /* ignore operator of first phrase */
@@ -88,7 +89,6 @@ var boolSearch=function(opts) {
 		r=OPERATION[op](r,this.phrases[i].docs);
 	}
 	this.docs=plist.unique(r);
-  if (!this.docs) this.docs=[];
 	return this;
 }
 module.exports={search:boolSearch}

@@ -276,7 +276,7 @@ var combine=function (postings) {
 }
 
 var unique = function(ar){
-   if (!ar || !ar.length) return;
+   if (!ar || !ar.length) return [];
    var u = {}, a = [];
    for(var i = 0, l = ar.length; i < l; ++i){
     if(u.hasOwnProperty(ar[i])) continue;
@@ -312,6 +312,7 @@ var plphrase = function (postings,ops) {
 var matchPosting=function(pl,gupl) {
   var count=0, i = j= 0,  result = [];
   var docs=[], freq=[];
+  if (!pl) return {docs:[],freq:[]};
   while( i < pl.length && j < gupl.length ){
      if (pl[i] < gupl[j] ){ 
        count++;

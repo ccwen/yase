@@ -197,10 +197,14 @@ var groupBy=function(gu) {
 		if (!docfreq[that.groupunit]) {
 			docfreq[that.groupunit]={doclist:null,freq:null};
 		}		
-		if (!P.posting) return;
-		var res=matchfunc.apply(that,[P.posting]);;
-		P.freq=res.freq;
-		P.docs=res.docs;
+		if (P.posting) {
+			var res=matchfunc.apply(that,[P.posting]);;
+			P.freq=res.freq;
+			P.docs=res.docs;
+		} else {
+			P.docs=[];
+			P.freq=[];
+		}
 		docfreq[that.groupunit]={doclist:P.docs,freq:P.freq};
 	});
 	this.phase=2;
@@ -243,7 +247,7 @@ var run=function(opts) {
 	if (this.phase>=3) return this;
 	
 	boolsearch.search.apply(this,[opts]);
-	if (opts.rank ){
+	if (opts.rank && this.phrases.length>1){
 		var rankmodel=RANK[opts.rank];
 		if (rankmodel) {
 			rankmodel.rank.apply(this);
@@ -260,7 +264,7 @@ var slice=function(opts) {
 	var max=opts.max||this.opts.max||20; 
  	var start=opts.start||this.opts.start||0;
  	var mode=opts.rank||this.opts.rank;
- 	if (mode=='vsm') {
+ 	if (mode=='vsm' && this.phrases.length>1) { //scoring is only valid for more than 2+ phrases
  		this.matched=this.score.slice(start,start+max);
  	} else {
  		this.matched=this.docs.slice(start,start+max).map(function(a){return [1,a]});;

@@ -4,10 +4,14 @@
 
 var calulateTermsIDFxIDF=function() {
 	if (this.IDFready) return;
+
 	for (var i=0;i<this.phrases.length;i++) {
 		var T=this.phrases[i];
-		var idf = Math.log( this.docs.length / T.docs.length );
-		if (!idf) idf=0.0001;
+		var idf=0;
+		if (T.docs && T.docs.length) {
+			idf = Math.log( this.docs.length / T.docs.length );
+		}
+		//if (!idf) idf=0.0001;
 		T.idf2=idf*idf;
 	}
 	this.IDFready=true;
