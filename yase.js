@@ -262,11 +262,11 @@ var getTextRange=function(start,end,opts) {
 var buildToc=function(toc,opts) {
 	var toctree=toc;
 	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
-	var searchtype=opts.searchtype||"phraseSearch";
+	
 	if (!toctree) return null;
-	var res=[];
-	if (opts.tofind) {
-		res=this[searchtype](opts.tofind, {raw:true});
+	var R={};
+	if (opts.query) {
+		R=this.search({query:opts.query,output:['hits']});
 	}	
 	var T=this.genToc(toctree,opts);
 	var Tvpos=T.map(function(a) {return a[1]});
@@ -275,8 +275,8 @@ var buildToc=function(toc,opts) {
 		Tree.push(this.parseSelector(toctree[i]));
 	}
 	var hits=null;
-	if (res.length) {
-		var g=plist.countbyposting(res, Tvpos);
+	if (R&&R.hits&&R.hits.length) {
+		var g=plist.countbyposting(R.hits, Tvpos);
 		hits=plist.groupsum(g,T.map(function(a){return a[0]}));
 	}
 

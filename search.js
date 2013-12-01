@@ -440,7 +440,7 @@ var search=function(opts) {
 	if (O["hits"]) {
 		var startslot=opts.startslot||0;
 		var endslot=opts.endslot||this.meta.slotcount;
-		R.hits=highlight.hitInRange.apply(this,[startslot,endslot]); 			
+		R.hits=highlight.hitInRange.apply(Q,[startslot,endslot]); 			
 	}
 
  	
