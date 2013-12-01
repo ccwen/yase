@@ -100,6 +100,10 @@ var injectTag=function(opts){
 				var nphrase=hits[j][1] % 10, width=hits[j][2];
 				var tag=hits[j][3] || tag;
 				if (width) {
+					while (tokens[i][0]=='<') {
+						output+=tokens[i];
+						i++;
+					}
 					output+= '<'+tag+' n="'+nphrase+'">';
 					while (width) {
 						output+=tokens[i];
