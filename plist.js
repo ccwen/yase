@@ -190,9 +190,12 @@ var plfollow2 = function (pl1, pl2, mindis, maxdis) {
       i++;
     } else {
       if (k>=pl2.length) break;
-      k=indexOfSorted (pl1,pl2[k]-maxdis);
-      if (k>i) i=k;
-      else break;
+      var k2=indexOfSorted (pl1,pl2[k]-maxdis);
+      if (k2>i) {
+        var t = (pl2[k] >= (pl1[i] +mindis) && pl2[k]<=(pl1[i]+maxdis)) ? k : -1;
+        if (t>-1) r.push(pl1[k2]);
+        i=k2;
+      } else break;
     }
   }
   return r;
@@ -211,10 +214,10 @@ var plnotfollow2 = function (pl1, pl2, mindis, maxdis) {
         r=r.concat(pl1.slice(i));
         break;
       } else {
-        k=indexOfSorted (pl1,pl2[k]-maxdis);
-        if (k>i) {
-          r=r.concat(pl1.slice(i,k));
-          i=k;
+        var k2=indexOfSorted (pl1,pl2[k]-maxdis);
+        if (k2>i) {
+          r=r.concat(pl1.slice(i,k2));
+          i=k2;
         } else break;
       }
     }
@@ -233,9 +236,12 @@ var plfollow = function (pl1, pl2, distance) {
       i++;
     } else {
       if (k>=pl2.length) break;
-      k=indexOfSorted (pl1,pl2[k]-distance);
-      if (k>i) i=k;
-      else break;
+      var k2=indexOfSorted (pl1,pl2[k]-distance);
+      if (k2>i) {
+        t = (pl2[k] === (pl1[k2] + distance)) ? k : -1;
+        if (t>-1) r.push(pl1[k2]);
+        i=k2;
+      } else break;
     }
   }
   return r;
@@ -255,10 +261,10 @@ var plnotfollow = function (pl1, pl2, distance) {
         r=r.concat(pl1.slice(i));
         break;
       } else {
-        k=indexOfSorted (pl1,pl2[k]-distance);
-        if (k>i) {
-          r=r.concat(pl1.slice(i,k));
-          i=k;
+        var k2=indexOfSorted (pl1,pl2[k]-distance);
+        if (k2>i) {
+          r=r.concat(pl1.slice(i,k2));
+          i=k2;
         } else break;
       }
     }

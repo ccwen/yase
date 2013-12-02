@@ -5,7 +5,10 @@ var search=Yase.search;
 var DBNAME='search-test-db.ydb';
 var db=Yase.use(DBNAME);
 
-
+QUnit.test("plist plfollow",function() {
+  var r=plist.plfollow([8,9,10,20,30,32,34,42],[11,19,31,33,40,41,43,44,45],1)
+  deepEqual(r,[10,30,32,42])
+});
 QUnit.test("match slot",function() {
   // 0-31, 32-63, 64-95, 96-127, 128-159, 160-192
   //  0      1     2       3       4         5
