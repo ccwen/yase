@@ -442,7 +442,7 @@ var search=function(opts) {
 		var endslot=opts.endslot||this.meta.slotcount;
 		R.hits=highlight.hitInRange.apply(Q,[startslot,endslot]); 			
 	}
-
+	if (O["context"]) R.context=Q;
  	
 	Q.lastAccess=new Date(); 
  	this.querycache[opts.query]=Q;

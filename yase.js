@@ -8,6 +8,7 @@ var plist=require('./plist.js');
 var binarysearch=require('./binarysearch')
 var search1=require('./search1');
 var search=require('./search');
+var highlight=require('./highlight');
 var getPosting=function(token) {
 	if (this.customfunc.token2tree) {
 		var tokenarr=this.customfunc.token2tree.apply(this,[token]);
@@ -30,17 +31,24 @@ var getKeys=function(id) {
 //return range of id given start and end
 
 var getText=function(slot,opts) {
+	
+	var t=this.customfunc.getText.apply(this,[slot,opts]);
+	opts=opts||{};
+	var start=0,end=0;
 	if (opts && opts.query) {
 	 	//console.log('text with tofind',opts.tofind);
 		//t=search1.highlighttexts.apply(this, [slot,opts.tofind,opts]);
-		var R=this.search({query:opts.query,output:["hits"]});
-
-		//console.log(R);
-
-	} else {
-	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
-	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
+		if (typeof slot!=='number') {
+			start=slot[0];//assume continous
+			end=slot[slot.length-1];
+		} else {
+			start=end=slot;
+		}
+		var R=this.search({query:opts.query,output:["hits","context"],startslot:start,endslot:end});
+		t=highlight.injectTag.apply(R.context,[{textarr:t,hits:R.hits,startslot:start,endslot:end}]);
 	}
+
+	//if (!opts) { if (t instanceOf Array) return t.join(""); else return t;}
 
 	var out=[];
 	if (opts.tokentag || opts.slotarray || opts.tokenarray) {
