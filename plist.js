@@ -221,7 +221,7 @@ var plnotfollow2 = function (pl1, pl2, mindis, maxdis) {
   }
   return r;
 }
-
+/* this is incorrect */
 var plfollow = function (pl1, pl2, distance) {
   var r = [];
 
@@ -265,7 +265,26 @@ var plnotfollow = function (pl1, pl2, distance) {
   }
   return r;
 }
-
+var pland = function (pl1, pl2, distance) {
+  var r = [];
+  var swap = 0;
+  
+  if (pl1.length > pl2.length) { //swap for faster compare
+    var t = pl2;
+    pl2 = pl1;
+    pl1 = t;
+    swap = distance;
+    distance = -distance;
+  }
+  for (var i = 0; i < pl1.length; i++) {
+    var k = indexOfSorted(pl2, pl1[i] + distance);
+    var t = (pl2[k] === (pl1[i] + distance)) ? k : -1;
+    if (t > -1) {
+      r.push(pl1[i] - swap);
+    }
+  }
+  return r;
+}
 var combine=function (postings) {
   var out=[];
   for (var i in postings) {
@@ -289,10 +308,8 @@ var unique = function(ar){
 
 
 var plphrase = function (postings,ops) {
-	
   var r = [];
   for (var i=0;i<postings.length;i++) {
-	i = parseInt(i);
 	if (!postings[i])
 	  return [];
 	if (0 === i) {
@@ -301,7 +318,7 @@ var plphrase = function (postings,ops) {
     if (ops[i]=='andnot') {
       r = plnotfollow(r, postings[i], i);  
     }else {
-      r = plfollow(r, postings[i], i);  
+      r = pland(r, postings[i], i);  
     }
 	}
   }

@@ -118,7 +118,7 @@ var loadtoken=function(token) {
 	
 	var expandtokens=expandToken.apply(this,[ t , {exact:exact}]);
 	var posting=null;
-	if (expandtokens){
+	if (expandtokens.length){
 		tokens=expandtokens.raw;
 		if (tokens.length==1) {
 			posting=this.getPosting(tokens[0]);	
@@ -307,6 +307,7 @@ var renderhits=function(g,ntokens,opts) {
 	}
 }
 var phraseSearch=function(tofind,opts) {
+
 	var tokenize=this.customfunc.tokenize;
 	if (!tokenize) throw 'no tokenizer';
 	if (!tofind) {
@@ -332,8 +333,10 @@ var phraseSearch=function(tofind,opts) {
 			var loaded=loadtoken.apply(this,[tokens[i]])
 			if (loaded.posting) {
 				postings.push(loaded.posting);
-				ops.push(loaded.op);
+			} else {
+				postings.push([])
 			}
+			ops.push(loaded.op);
 		}
 		if (profile) console.timeEnd('get posting');
 		if (profile) console.time('phrase merge')
