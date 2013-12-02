@@ -60,6 +60,7 @@ var hitInRange=function(startslot,endslot) {
 	var res=[];
 	for (var i=0;i<this.phrases.length;i++) {
 		var P=this.phrases[i];
+		if (!P.posting) continue;
 		var s=this.indexOfSorted(P.posting,startvoff);
 		var e=this.indexOfSorted(P.posting,endvoff);
 		var r=P.posting.slice(s,e);

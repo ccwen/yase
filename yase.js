@@ -30,9 +30,13 @@ var getKeys=function(id) {
 //return range of id given start and end
 
 var getText=function(slot,opts) {
-	if (opts && opts.tofind) {
+	if (opts && opts.query) {
 	 	//console.log('text with tofind',opts.tofind);
-		t=search1.highlighttexts.apply(this, [slot,opts.tofind,opts]);
+		//t=search1.highlighttexts.apply(this, [slot,opts.tofind,opts]);
+		var R=this.search({query:opts.query,output:["hits"]});
+
+		//console.log(R);
+
 	} else {
 	 	var t=this.customfunc.getText.apply(this,[slot,opts]);
 	 	if (!opts) { if (typeof t=='object') return t.join(""); else return t; }
@@ -230,7 +234,7 @@ var closestTag=function(tagname,nslot,opts) {
 			if (sel.key) {
 				tag.value=this.getTagAttr(sel.tag,c,sel.key);
 				var tried=100; //this should be enough
-				while (!tag.value && tried) {
+				while (!tag.value && tried && c>=0) {
 					tag.value=this.getTagAttr(sel.tag,c--,sel.key);
 					tried--;
 				}
