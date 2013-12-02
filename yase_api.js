@@ -5,7 +5,7 @@ var yase=require('./yase');
 var phraseSearch=function(opts) {
 	var se=yase(opts.db);
 	var res=se.phraseSearch(opts.tofind,opts);
-	console.warn('phraseSearch is obsolute')
+	//console.warn('phraseSearch is obsolute')
 	return res;
 };
 var boolSearch=function(opts) {

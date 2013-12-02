@@ -71,7 +71,7 @@ var expandToken=function(token,opts) {
 	opts.max=opts.max||100;
 	var count=0;
 	var out=[];
-	var tree=this.customfunc.token2tree(token);
+	var tree=this.customfunc.token2tree.apply(this,[token]);
 	var keys=expandKeys.apply(this, [ tree,[],opts ]);
 	var simplified=[],count=[];
 	if (this.customfunc.simplifiedToken) {
