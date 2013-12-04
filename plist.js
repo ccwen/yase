@@ -332,24 +332,31 @@ var plphrase = function (postings,ops) {
   return r;
 }
 //return an array of group having any of pl item
-var matchPosting=function(pl,gupl) {
-  var count=0, i = j= 0,  result = [];
+var matchPosting=function(pl,gupl,start,end) {
+  start=start||0;
+  end=end||-1;
+  if (end==-1) end=Math.pow(2, 53); // max integer value
+
+  var count=0, i = j= 0,  result = [] ,v=0;
   var docs=[], freq=[];
   if (!pl) return {docs:[],freq:[]};
   while( i < pl.length && j < gupl.length ){
      if (pl[i] < gupl[j] ){ 
        count++;
+       v=pl[i];
        i++; 
      } else {
        if (count) {
-        docs.push(j);
-        freq.push(count);
+        if (v>=start && v<end) {
+          docs.push(j);
+          freq.push(count);          
+        }
        }
        j++;
        count=0;
      }
   }
-  if (count && j<gupl.length) {
+  if (count && j<gupl.length && v>=start && v<end) {
     docs.push(j);
     freq.push(count);
     count=0;
@@ -359,16 +366,19 @@ var matchPosting=function(pl,gupl) {
       i++;
       count++;
     }
-    docs.push(j);
-    freq.push(count);
+    if (v>=start && v<end) {
+      docs.push(j);
+      freq.push(count);      
+    }
   } 
   return {docs:docs,freq:freq};
 }
 //return an array of slot having any of pl item
-var matchSlot=function(pl,slotshift) {
+var matchSlot=function(pl,slotshift,start,end) {
   slotshift = slotshift || 16 ;
   var g = Math.pow(2,slotshift);
-  var groups=pl.map(function(v) {return Math.floor(v / g)});
+  var filtered=pl.filter(function(v){v>=start && v<end});
+  var groups=filtered.map(function(v) {return Math.floor(v / g)});
   var docs=unique(groups);
   var freq=[];
   var last=groups[0],count=1;

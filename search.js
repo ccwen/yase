@@ -161,14 +161,25 @@ var load=function() {
 	var phrases=this.phrases;
 	var that=this;
 	phrases.forEach(loadPhrase.bind(this));
+
 	this.phase=1;
 	return this;
 }
+var getVoffRange=function() {
+	var s=this.opts.rangestart;
+	var e=this.opts.rangeend;
+	if (e==-1) e=this.db.meta.slotcount;
+	s*=this.db.meta.slotsize;
+	e*=this.db.meta.slotsize;
+	return {start:s,end:e}	;
+}
 var matchSlot=function(pl) {
-	return plist.matchSlot(pl, this.db.meta.slotshift);
+	var r=getVoffRange.call(this);
+	return plist.matchSlot(pl, this.db.meta.slotshift,r.start,r.end);
 }
 var matchPosting=function(pl) {
-	return plist.matchPosting(pl,this.groupposting);
+	var r=getVoffRange.call(this);
+	return plist.matchPosting(pl,this.groupposting,r.start,r.end);
 }
 var groupBy=function(gu) {
 	gu=gu||this.opts.groupunit||'';
@@ -190,6 +201,7 @@ var groupBy=function(gu) {
 	}
 	this.groupunit=gu;
 	var that=this;
+
 	phrases.forEach(function(P){
 		var key=P.key;
 		var docfreq=docfreqcache[key];
@@ -387,6 +399,8 @@ var resetPhase=function(opts) {
 	if (this.opts.start!=opts.start || this.opts.max!=opts.max ) this.phase=3;
 	if (this.opts.rank!=opts.rank) this.phase=2;
 	if (this.opts.groupunit!=opts.groupunit) this.phase=1;
+	if (this.opts.rangestart!=opts.rangestart
+		||this.opts.rangeend!=opts.rangeend) this.phase=1;
 	if (this.opts.query!=opts.query) this.phase=0;
 }
 var db_purgeObsoleteQuery=function() {

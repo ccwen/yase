@@ -276,9 +276,10 @@ var buildToc=function(toc,opts) {
 	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
 	
 	if (!toctree) return null;
-	var R={};
+	var R={},hitsvpos=null;
 	if (opts.query) {
 		R=this.search({query:opts.query,output:['hits']});
+		hitsvpos=R.hits.map(function(a){return a[0]}); //take only vpos
 	}	
 	var T=this.genToc(toctree,opts);
 	var Tvpos=T.map(function(a) {return a[1]});
@@ -287,8 +288,8 @@ var buildToc=function(toc,opts) {
 		Tree.push(this.parseSelector(toctree[i]));
 	}
 	var hits=null;
-	if (R&&R.hits&&R.hits.length) {
-		var g=plist.countbyposting(R.hits, Tvpos);
+	if (hitsvpos&&hitsvpos.length) {
+		var g=plist.countbyposting(hitsvpos, Tvpos);
 		hits=plist.groupsum(g,T.map(function(a){return a[0]}));
 	}
 
