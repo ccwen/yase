@@ -218,6 +218,9 @@ var exist=function(names) {
 	}
 	return out;
 }
+var enumLocalYdb=function() {
+	return require('yadb').api().getRaw([],{local:true,loadmeta:true});
+}
 var installservice=function(services) { // so that it is possible to call other services
 	//yase_api(services);
 	require('yadb').api(services);
@@ -243,6 +246,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	findTagBySelectors:findTagBySelectors,
 	getRaw:getRaw,
 	getBlob:getBlob,
+	enumLocalYdb:enumLocalYdb,
 	version: function() { return require('./package.json').version },
 	//initialize:initialize
 	};

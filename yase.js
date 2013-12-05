@@ -346,7 +346,6 @@ var fetchPage=function(tagname,seq,opts) {
 	}
 	return r;
 }
-
 var yase_use = function(fn,opts) { 
 	var db = null;
 	var se_preload=function(instance) {
