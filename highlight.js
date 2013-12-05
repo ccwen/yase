@@ -81,7 +81,7 @@ var hitInRange=function(startslot,endslot) {
 var injectTag=function(opts){
 	var hits=opts.hits;
 	var tag=opts.tag||'hl';
-	var output='',j=0;;
+	var output='',O=[],j=0;;
 	for (var t=0;t<opts.textarr.length;t++) {
 		var slot=opts.startslot+t;
 		var voff=slot*this.slotsize;
@@ -90,6 +90,8 @@ var injectTag=function(opts){
 				output+=opts.abridged.replace(/\$slot/g,slot); // ...
 			}
 			else output+=opts.textarr[t]; //output as it is
+			O.push(output);
+			output='';
 			continue;
 		}
 
@@ -124,8 +126,11 @@ var injectTag=function(opts){
 			}
 		}
 		while (i<tokens.length) output+= tokens[i++];
+		O.push(output);
+		output="";
 	}
-	return output;
+	if (opts.join) return O.join("");
+	else return O;
 }
 var highlight=function(opts) {
 	opts=opts||{};
@@ -140,7 +145,7 @@ var highlight=function(opts) {
 		if (!this.texts[docid]) {
 			var opt={textarr:res.text,
 				startslot:res.start,endslot:res.end,
-				hits:null,tag:'hl',abridged:this.opts.abridged
+				hits:null,tag:'hl',abridged:this.opts.abridged,join:true
 			};
 			opt.hits=hitInRange.apply(this,[res.start,res.end]);
 			this.texts[docid]=injectTag.apply(this,[opt]);

@@ -375,9 +375,12 @@ var matchPosting=function(pl,gupl,start,end) {
 }
 //return an array of slot having any of pl item
 var matchSlot=function(pl,slotshift,start,end) {
+  start=start||0;
+  end=end||-1;
+  if (end==-1) end=Math.pow(2, 53); // max integer value
   slotshift = slotshift || 16 ;
   var g = Math.pow(2,slotshift);
-  var filtered=pl.filter(function(v){v>=start && v<end});
+  var filtered=pl.filter(function(v){return v>=start && v<end});
   var groups=filtered.map(function(v) {return Math.floor(v / g)});
   var docs=unique(groups);
   var freq=[];

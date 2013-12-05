@@ -51,7 +51,8 @@ var getText=function(slot,opts) {
 	//if (!opts) { if (t instanceOf Array) return t.join(""); else return t;}
 
 	var out=[];
-	if (opts.tokentag || opts.slotarray || opts.tokenarray) {
+
+	if (opts.tokentag || opts.slottag || opts.slotarray || opts.tokenarray) {
 		if (typeof slot=='number' || typeof slot=='string') slot=[parseInt(slot)];
 		if (typeof t=='string') t=[t];
 		var slotsize = 2 << (this.meta.slotshift -1);
@@ -72,7 +73,6 @@ var getText=function(slot,opts) {
 				 		} else {
 				 			T+='<tk n="'+tokenoffset+'">'+tk+'</tk>';	
 				 		}
-				 		
 				 	} else T+=tk;
 			 	}
 			} else T=t[j];
@@ -80,7 +80,7 @@ var getText=function(slot,opts) {
 				if (opts.tokenarray) out.push(TK)
 				else out.push(T);
 			} else {
-				if (opts.slottag) out.push('<slot n="'+slot[j]+'">'+T+'</slot>');	
+				if (opts.slottag) out.push('<'+opts.slottag+' n="'+slot[j]+'">'+T+'</'+opts.slottag+'>');	
 			}
 			
 		}
@@ -278,7 +278,7 @@ var buildToc=function(toc,opts) {
 	if (!toctree) return null;
 	var R={},hitsvpos=null;
 	if (opts.query) {
-		R=this.search({query:opts.query,output:['hits']});
+		R=this.search({db:opts.db,query:opts.query,output:['hits']});
 		hitsvpos=R.hits.map(function(a){return a[0]}); //take only vpos
 	}	
 	var T=this.genToc(toctree,opts);
