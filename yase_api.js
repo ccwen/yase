@@ -61,11 +61,6 @@ var getRange=function(opts) {
 	return res;
 }
 
-var gettextbytag=function(opts) {
-	var se=yase(opts.db);
-	var res=se.getTextByTag(opts);
-	return res;
-}
 var gettagattr=function(opts) {
 	var se=yase(opts.db);
 	var res=se.getTagAttr(opts.tag,opts.ntag,opts.attr);
@@ -103,6 +98,72 @@ var findTagBySelectors=function(opts) {
 	}
 	return out;
 }
+var getTextByTag=function(opts) {
+	var se=yase(opts.db);
+
+	var maxslot=opts.maxslot || 1000;
+	
+	var tagseq=opts.ntag;
+	var t=null,t2=null,tagseq=0;
+	if (opts.selector) {
+		if (typeof opts.selector=='string') {
+			t=se.findTagBySelector(opts.selector);
+			t2=se.getTag(t.tag,t.ntag+1);
+			tagseq=t.ntag;
+		} else {
+			opts.selectors=opts.selector;
+			var tags=findTagBySelectors(opts);
+			t=tags[tags.length-1];//take the last one
+			t2=se.getTag(t.tag,t.ntag+1);
+			tagseq=t.ntag;
+		}
+		
+	} else {
+		t=se.getTag(opts.tag,tagseq);	
+		t2=se.getTag(opts.tag,tagseq+1);		
+	}
+
+
+	/*
+	if (opts.selector) {
+		sel=this.parseSelector(opts.selector);
+		opts.tag=sel.tag;
+		opts.attribute=sel.attribute;
+		opts.value=sel.value;
+	}
+	if (typeof opts.ntag !='undefined') {
+		tagseq=parseInt(opts.ntag);
+	} else {
+		if (typeof opts.value=='string') {
+			var depth=this.meta.schema[opts.tag]
+				      .indexattributes[opts.attribute].depth;
+			if (depth>1) {
+				opts.value=opts.value.split('.');
+				while (opts.value.length<depth) opts.value.push(' ');
+			}
+		}
+		var par=['tags',opts.tag,opts.attribute+'='].concat(opts.value);
+		var tagseq=this.get(par) ;
+	}
+
+	var t=this.getTag(opts.tag,tagseq);
+	t.id=this.getTagAttr(opts.tag, tagseq, opts.attribute || 'id');
+	var t2=this.getTag(opts.tag,1+tagseq);
+	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attribute || 'id');
+	*/
+
+	var seqarr=[];
+	opts.extraslot=opts.extraslot||0;
+	for (var i=t.slot;i<t2.slot+opts.extraslot;i++) {
+		seqarr.push(i); 
+		if (seqarr.length>maxslot) break; 
+	}
+	var out={slot:t.slot, ntag: tagseq, starttag:t, endtag:t2, head:t.head, text:se.getText(seqarr,opts)};
+	if (opts.sourceinfo) {
+		out.sourceinfo=se.sourceInfo(t.slot);
+	}
+	return out;
+}	
 
 
 var findTag=function(opts) {
@@ -244,7 +305,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	keyExists:keyExists,
 	expandToken:expandToken,
 	getRange:getRange,
-	getTextByTag:gettextbytag,
+	getTextByTag:getTextByTag,
 	getTagAttr:gettagattr,
 	getTextRange:getTextRange,
 	getTagInRange:getTagInRange,

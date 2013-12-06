@@ -91,6 +91,7 @@ var findTag=function(tagname,attributename,value) {
 
 		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);
 		tag.text=this.getText(tag.slot);
+		tag.tag=tagname;
 		return tag;
 	}
 
@@ -107,6 +108,8 @@ var findTag=function(tagname,attributename,value) {
 		//tag.offset= db.get(['tags',tagname,'_offset',tag.ntag]);
 		tag.head= this.get(['tags',tagname,'_head',tag.ntag]);
 		tag.text=this.getText(tag.slot);
+		tag.tag=tagname;
+
 		out.push(tag)
 	}
 	return  out;

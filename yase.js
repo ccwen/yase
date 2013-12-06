@@ -131,46 +131,6 @@ var getTagInRange=function(start,end,tagname,opts) {
 
 }
 
-var getTextByTag=function(opts) {
-	var maxslot=opts.maxslot || 1000;
-	if (opts.selector) {
-		sel=this.parseSelector(opts.selector);
-		opts.tag=sel.tag;
-		opts.attribute=sel.attribute;
-		opts.value=sel.value;
-	}
-	if (typeof opts.ntag !='undefined') {
-		tagseq=parseInt(opts.ntag);
-	} else {
-		if (typeof opts.value=='string') {
-			var depth=this.meta.schema[opts.tag]
-				      .indexattributes[opts.attribute].depth;
-			if (depth>1) {
-				opts.value=opts.value.split('.');
-				while (opts.value.length<depth) opts.value.push(' ');
-			}
-		}
-		var par=['tags',opts.tag,opts.attribute+'='].concat(opts.value);
-		var tagseq=this.get(par) ;
-	}
-
-	var t=this.getTag(opts.tag,tagseq);
-	t.id=this.getTagAttr(opts.tag, tagseq, opts.attribute || 'id');
-	var t2=this.getTag(opts.tag,1+tagseq);
-	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attribute || 'id');
-
-	var seqarr=[];
-	opts.extraslot=opts.extraslot||0;
-	for (var i=t.slot;i<t2.slot+opts.extraslot;i++) {
-		seqarr.push(i); 
-		if (seqarr.length>maxslot) break; 
-	}
-	var out={slot:t.slot, ntag: tagseq, starttag:t, endtag:t2, head:t.head, text:this.getText(seqarr,opts)};
-	if (opts.sourceinfo) {
-		out.sourceinfo=sourceInfo.apply(this,[t.slot]);
-	}
-	return out;
-}	
 
 var getTag=function(tagname,seq) {
 	return this.customfunc.getTag.apply(this,[tagname,seq]);
@@ -370,7 +330,7 @@ var yase_use = function(fn,opts) {
 		instance.getTagAttr=getTagAttr;
 
 		instance.fetchPage=fetchPage;
-		instance.getTextByTag=getTextByTag;
+		//instance.getTextByTag=getTextByTag;
 		instance.search=search.search;
 
 		instance.getPosting=getPosting;

@@ -1,25 +1,23 @@
-﻿var vows = require('vows'),
-    assert = require('assert'),
-    Yase=require('../yase'),
-    Search=require('../search');
+﻿var Yase=require('yase');
+var Search=require('../search');
 var fs=require('fs')
-vows.describe('yadm 4 test suite').addBatch({
-    'texts': {
-        topic: function () {
-        	var db=new Yase('../../../cst/vrimul.ydb',{nowatch:true})
-        	return db;
-	},
-	gettext:function(topic) {
-		assert.equal(topic.getText(0).trim(),'<xml src="s0101m-d1.xml">','gettext')
-	},
-	gettag:function(topic) {
-		var r=topic.getTag('pb.V',0);
-		assert.deepEqual(r,{vpos:2562,slot:10,offset:2,name:'pb.V'},'gettag');
-	},
-	findtag:function(topic) {
-		var r=topic.findTag('pb.V','n','1.0001');
-		assert.equal(r[0].ntag,0,'findtag');
-	},
-	}
+var DBNAME='../../../cst/vrimul.ydb';
+var db=Yase.use(DBNAME);
 
-}).export(module); // Export the Suite
+QUnit.test("gettext",function() {
+		equal(db.getText(0).trim(),'<xml src="s0101m-d1.xml">')
+});
+QUnit.test("gettag",function() {
+		var r=db.getTag('pb.V',0);
+		deepEqual(r,{vpos:2561,slot:10,offset:1,name:'pb.V'});
+});
+QUnit.test("findtag",function() {
+		var r=db.findTag('pb.V','n','1.0001');
+		equal(r[0].ntag,0,'findtag');
+});
+QUnit.test("expand",function() {
+		
+		var tree=db.customfunc.token2tree.apply(db,["samayaṁ"]);
+		var expanded=db.customfunc.expandToken.apply(db, [ tree,[] ]);
+		console.log(expanded)
+});
