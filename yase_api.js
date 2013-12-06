@@ -221,6 +221,19 @@ var exist=function(names) {
 var enumLocalYdb=function() {
 	return require('yadb').api().getRaw([],{local:true,loadmeta:true});
 }
+//return database and slot with same id, except current db
+var sameId=function(opts) {
+	var dbs=opts.local?enumLocalYdb():getRaw([]);
+	var res=[],o={selectors:opts.selector};
+	for (var i in dbs) {
+		if (i==opts.db || dbs[i].name==opts.db) continue;
+		o.db=i;
+		var r=findTagBySelectors(o);
+		var tag=r[r.length-1];//just return the last one
+		if (tag.slot) res.push(tag); 
+	}
+	return res;
+}
 var installservice=function(services) { // so that it is possible to call other services
 	//yase_api(services);
 	require('yadb').api(services);
@@ -247,6 +260,7 @@ var installservice=function(services) { // so that it is possible to call other 
 	getRaw:getRaw,
 	getBlob:getBlob,
 	enumLocalYdb:enumLocalYdb,
+	sameId:sameId,
 	version: function() { return require('./package.json').version },
 	//initialize:initialize
 	};
