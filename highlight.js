@@ -29,7 +29,13 @@ var getDocText=function(docid) {
 
 	return {text:text, start:startslot, end:endslot};
 }
-
+var getPhraseWidths=function (phraseid,voffs) {
+	var res=[];
+	for (var i in voffs) {
+		res.push(getPhraseWidth.apply(this,[phraseid,voffs[i]]));
+	}
+	return res;
+}
 var getPhraseWidth=function (phraseid,voff) {
 	var P=this.phrases[phraseid];
 	var width=0,varwidth=false;
@@ -48,7 +54,7 @@ var getPhraseWidth=function (phraseid,voff) {
 	if (varwidth) { //width might be smaller due to * wildcard
 		var at=this.indexOfSorted(lasttermposting,voff);
 		var endpos=lasttermposting[at];
-		if (endpos-voff<width) width=endpos-voff;
+		if (endpos-voff<width) width=endpos-voff+1;
 	}
 
 	return width;
@@ -64,9 +70,9 @@ var hitInRange=function(startslot,endslot) {
 		var s=this.indexOfSorted(P.posting,startvoff);
 		var e=this.indexOfSorted(P.posting,endvoff);
 		var r=P.posting.slice(s,e);
-		var width=getPhraseWidth.apply(this,[i,startvoff])
+		var width=getPhraseWidths.apply(this,[i,r]);
 
-		res=res.concat(r.map(function(voff){ return [voff,i,width] }));
+		res=res.concat(r.map(function(voff,idx){ return [voff,i,width[idx]] }));
 	}
 	// order by voff, if voff is the same, larger width come first.
 	// so the output will be

@@ -71,18 +71,18 @@ var parseTerm = function(raw,opts) {
 		term=term.substring(1);
 		res.exclude=true; //exclude
 	}
-
-	term=this.customfunc.normalizeToken.apply(this,[term]);
+	term=term.trim();
 	var lastchar=term[term.length-1];
+	term=this.customfunc.normalizeToken.apply(this,[term]);
 	
 	if (lastchar=='%') {
 		res.variants=getTermVariants.apply(this,[term.substring(0,term.length-1)]).variants;
 		res.op='prefix'
 	} else if (lastchar=='^') {
-		term=term.substring(0,term.length-1);
+		//term=term.substring(0,term.length-1);
 		res.op='exact';
 	} else if (lastchar==',') {
-		term=term.substring(0,term.length-1);
+		//term=term.substring(0,term.length-1);
 	}
 	res.key=term;
 	return res;
@@ -93,11 +93,27 @@ var loadTerm=function() {
 	this.terms.forEach(function(T){
 		var key=T.key;
 		if (cache[key]) T.posting=cache[key];
+
 		if (db.customfunc.expandToken && T.op!='exact'  && T.op!='wildcard') {
-			var tree=db.customfunc.token2tree.apply(db,[key]);
-			var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
-			for (var i in expanded) T.variants.push({text:expanded[i]});
+			if (!T.variants.length) { //no manual ,
+				var tree=db.customfunc.token2tree.apply(db,[key]);
+				var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
+				for (var i in expanded) T.variants.push({text:expanded[i]});
+
+			} else {
+				var newvariants=[];
+	  		T.variants.forEach(function(TK){
+	  			
+					var tree=db.customfunc.token2tree.apply(db,[TK.text]);
+					var expanded=db.customfunc.expandToken.apply(db, [ tree,[],{exact:true} ]);
+					for (var i in expanded) newvariants.push({text:expanded[i]});					
+	  		})
+	  		T.variants=newvariants;	
+	  		
+			}
 		}
+
+
 		if (!T.posting && T.op!='wildcard') {
 			if (T.variants && T.variants.length) { //term expands to multiple tokens
 				var postings=[];
