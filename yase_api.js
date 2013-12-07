@@ -318,12 +318,13 @@ var exist=function(names) {
 	}
 	return out;
 }
-var enumLocalYdb=function() {
-	return require('yadb').api().getRaw([],{local:true,loadmeta:true});
+var enumLocalYdb=function(folder) {
+	return require('yadb').api().getRaw([],{folder:folder,loadmeta:true});
 }
 //return database and slot with same id, except current db
 var sameId=function(opts) {
-	var dbs=opts.local?enumLocalYdb():getRaw([]);
+	var se=yase(opts.db);
+	var dbs=opts.local?enumLocalYdb(se.folder):getRaw([]);
 	var res=[],o={selectors:opts.selector};
 	for (var i in dbs) {
 		if (i==opts.db || dbs[i].name==opts.db) continue;
