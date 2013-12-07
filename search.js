@@ -464,6 +464,9 @@ var search=function(opts) {
 			r.slot=slot;
 			r.lastslot=lastslot;
 		}
+		if (opts.closesttag) {
+				r.closest=this.closestTag.apply(this,[opts.closesttag,r.slot]);
+		}		
 		R.result.push(r)
 	}	
 
