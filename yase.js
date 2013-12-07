@@ -101,6 +101,7 @@ var getRange=function(start,end,opts) {
 	return output;
 }
 var getTagInRange=function(start,end,tagname,opts) {
+	opts=opts||{};
 	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
 	var startvpos=start*this.meta.slotsize;
 	if (end==-1) end=this.meta.slotcount;
@@ -118,9 +119,10 @@ var getTagInRange=function(start,end,tagname,opts) {
 					var v=this.getTagAttr(tagname , i, attr);
 					T.values[attr]=v;
 					T.seq=i;
+					T.value=v; //helper for only one attribute most of the time
 					if (v) hasvalue=true;
 				}
-				if (hasvalue) count++; //count only with value
+			if (hasvalue) count++; //count only with value
 				else if (opts.withattributeonly) continue;
 			} else count++;
 			out.push(T);
@@ -139,6 +141,7 @@ var getTagPosting=function(tagname) {
 	return this.customfunc.getTagPosting.apply(this,[tagname]);
 }
 var findTag=function(tagname,attributename,value) {
+	if (typeof value=='number') value=value.toString();
 	return this.customfunc.findTag.apply(this,[tagname,attributename,value]);
 }
 

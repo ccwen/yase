@@ -88,15 +88,50 @@ var fuzzysearch=function(opts) {
 */
 var findTagBySelectors=function(opts) {
 	var start=0, o={}, out=[];
-	for (var i in opts.selectors) {
+	var se=yase(opts.db);
+	for (var i=0;i<opts.selectors.length;i++) {
 		o.db=opts.db;
 		o.selector=opts.selectors[i];
 		o.start=start;
+
+		if (i) {
+			var sel=se.parseSelector(opts.selectors[i-1]);
+			sel.db=opts.db;
+			var next=getNextSelector.apply(se,[sel,out[out.length-1]]);
+			o.end=next.slot;
+		}
+
 		var r=findTag(o);
-		if (r&&r[0].slot) start=r[0].slot;
-		out.push(r[0]);
+		if (r&&r.length) {
+			start=r[0].slot;
+			out.push(r[0]);
+		} else {
+			return out;
+		}
 	}
 	return out;
+}
+
+var getNextSelector=function(sel,fromtag) {
+	  var maxgap=1000;
+		var val=parseInt(sel.value,10);
+		if (val) { // try next number
+			sel.value=val+1;sel.start=fromtag.slot;
+			var tags=findTag(sel);
+			if (tags.length) var tag=tags[0];
+			if (tag.slot-fromtag.slot>maxgap) { //too far , TIK , ATT p[n] is not continuous D15 missing p[n=96,p[n=97
+				opts={attributes:['n']}
+				var range=this.getTagInRange(fromtag.slot,fromtag.slot+maxgap,sel.tag,opts);
+				for (var i in range) {
+					if (parseInt(range[i].value,10)>=val+1) return range[i];
+				}
+			} else {
+				return tag;
+			}
+		} else {
+			return this.getTag(fromtag.tag,fromtag.ntag+1);	
+		}
+		return null;
 }
 var getTextByTag=function(opts) {
 	var se=yase(opts.db);
@@ -117,15 +152,13 @@ var getTextByTag=function(opts) {
 			sel=se.parseSelector(opts.selectors[opts.selectors.length-1]);
 		}
 		tagseq=t.ntag;
-		var val=parseInt(sel.val,10);
-		if (val) t2=se.findTag(sel.tag,sel.attribute,val+1)
-		else     t2=se.getTag(t.tag,t.ntag+1);	
+		sel.db=opts.db;
+		t2=getNextSelector.apply(se,[sel,t]);
 	} else {
 		t=se.getTag(opts.tag,tagseq);	
 		t2=se.getTag(opts.tag,tagseq+1);		
 	}
-
-
+	if (!t2) return "";
 	/*
 	if (opts.selector) {
 		sel=this.parseSelector(opts.selector);
@@ -171,6 +204,8 @@ var getTextByTag=function(opts) {
 var findTag=function(opts) {
 	var se=yase(opts.db);
 	opts.slot=opts.slot||0;
+	opts.end=opts.end||se.meta.slotcount;
+
 	var o=opts, tags=[];
 	if (opts.selector) o=se.parseSelector(opts.selector);
 	if (typeof o.value=='object') {
@@ -190,9 +225,11 @@ var findTag=function(opts) {
 				t=[t];
 			}
 			for (var i in t) {
-				if (t[i].slot<opts.start) continue;
-				t[i].db=opts.db;
-				tags.push(t[i]);
+				if (t[i].slot<opts.start ) continue;
+				if (t[i].slot<opts.end) {
+					t[i].db=opts.db;
+					tags.push(t[i]);
+				}
 			}
 		}
 	}
@@ -292,8 +329,10 @@ var sameId=function(opts) {
 		if (i==opts.db || dbs[i].name==opts.db) continue;
 		o.db=i;
 		var r=findTagBySelectors(o);
-		var tag=r[r.length-1];//just return the last one
-		if (tag.slot) res.push(tag); 
+		if (r&&r.length==o.selectors.length) {
+			var tag=r[r.length-1];//just return the last one
+			res.push(tag); 
+		}
 	}
 	return res;
 }
