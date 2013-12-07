@@ -42,7 +42,7 @@ var cosineSimilarityQuery = function (d) {
 }
 
 var vsm=function(){
-	var minscore=this.opts.minscore||0.5;
+	var minscore=this.opts.minscore||0.2;
 	calulateTermsIDFxIDF.apply(this);
 	this.score=[];
 	for (var i=0;i<this.docs.length;i++) {
