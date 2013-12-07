@@ -104,20 +104,22 @@ var getTextByTag=function(opts) {
 	var maxslot=opts.maxslot || 1000;
 	
 	var tagseq=opts.ntag;
-	var t=null,t2=null,tagseq=0;
+	var t=null,t2=null,tagseq=0,sel=null;
+
 	if (opts.selector) {
 		if (typeof opts.selector=='string') {
 			t=se.findTagBySelector(opts.selector);
-			t2=se.getTag(t.tag,t.ntag+1);
-			tagseq=t.ntag;
+			sel=se.parseSelector(opts.selector);
 		} else {
 			opts.selectors=opts.selector;
 			var tags=findTagBySelectors(opts);
 			t=tags[tags.length-1];//take the last one
-			t2=se.getTag(t.tag,t.ntag+1);
-			tagseq=t.ntag;
+			sel=se.parseSelector(opts.selectors[opts.selectors.length-1]);
 		}
-		
+		tagseq=t.ntag;
+		var val=parseInt(sel.val,10);
+		if (val) t2=se.findTag(sel.tag,sel.attribute,val+1)
+		else     t2=se.getTag(t.tag,t.ntag+1);	
 	} else {
 		t=se.getTag(opts.tag,tagseq);	
 		t2=se.getTag(opts.tag,tagseq+1);		
