@@ -11,8 +11,9 @@ var isBreaker=function(ch) {
 var isSearchableChar=function(c) {
 	var code=c.charCodeAt(0);
 	return ((code>=0x30 && code<=0x39)||(code>=0x41 && code<=0x5a)
-	 || (code>=0x61 && code<=0x7a) || 
-	 (code>=0x30 && code<=0x39)||c=='%'); //% for prefix match
+	 || (code>=0x61 && code<=0x7a)
+	 || (code>=0xf20&& code<=0xfbc) //tibetan
+	 || (code>=0x30 && code<=0x39)||c=='%'); //% for prefix match
 
 }
 var isSpaceChar=function(c) {
