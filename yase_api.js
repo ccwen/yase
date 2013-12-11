@@ -139,7 +139,7 @@ var getTextByTag=function(opts) {
 	var maxslot=opts.maxslot || 1000;
 	
 	var tagseq=opts.ntag;
-	var t=null,t2=null,tagseq=0,sel=null;
+	var t=null,t2=null,sel=null;
 
 	if (opts.selector) {
 		if (typeof opts.selector=='string') {
