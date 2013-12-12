@@ -86,9 +86,23 @@ var fuzzysearch=function(opts) {
 	return res;
 }
 */
+
+var autoappend=function(sel,parentval) {
+		var depth=sel.value.split(".").length;	
+		var metadepth=this.meta.schema[sel.tag].indexattributes[sel.attribute].depth;
+		if (depth<metadepth) {
+			var d=parentval.length-1;
+			while (depth<metadepth) {
+				sel.value=parentval[d]+'.'+sel.value;
+				depth++;d--;
+			}
+		}
+		return sel.tag+'['+sel.attribute+'='+sel.value;	
+}
 var findTagBySelectors=function(opts) {
 	var start=0, o={}, out=[];
 	var se=yase(opts.db);
+	var parentval=[];
 	for (var i=0;i<opts.selectors.length;i++) {
 		o.db=opts.db;
 		o.selector=opts.selectors[i];
@@ -97,13 +111,24 @@ var findTagBySelectors=function(opts) {
 		if (i) {
 			var sel=se.parseSelector(opts.selectors[i-1]);
 			sel.db=opts.db;
+			//get the range end of parent
 			var next=getNextSelector.apply(se,[sel,out[out.length-1]]);
 			o.end=next.slot;
 		}
 
+		var sel=se.parseSelector(o.selector);
+		//user may readunit[id=d1]  p[n=1]
+		//         readunit[id=d1]  p[n=d1.1]  both ok
+		if (i) o.selector=autoappend.apply(se,[sel,parentval]);
+
+		parentval.push(sel.value);
+
 		var r=findTag(o);
 		if (r&&r.length) {
 			start=r[0].slot;
+			sel.db=opts.db;
+			var nexttag=getNextSelector.apply(se,[sel,r[0]]);
+			r[0].next=nexttag;
 			out.push(r[0]);
 		} else {
 			return out;
@@ -114,13 +139,18 @@ var findTagBySelectors=function(opts) {
 
 var getNextSelector=function(sel,fromtag) {
 	  var maxgap=1000;
-		var val=parseInt(sel.value,10);
-		if (val) { // try next number
-			sel.value=val+1;sel.start=fromtag.slot;
+	  var vals=sel.value.split(".");
+		vals[vals.length-1]=parseInt(vals[vals.length-1],10);
+
+		if (vals[vals.length-1]) { // try next number
+			vals[vals.length-1]++;
+			sel.value=vals.join(".");sel.start=fromtag.slot;
 			var tags=findTag(sel);
-			if (tags.length) var tag=tags[0];
+			var tag=null;
+			if (tags.length) tag=tags[0];
+			if (!tag)return null;
 			if (tag.slot-fromtag.slot>maxgap) { //too far , TIK , ATT p[n] is not continuous D15 missing p[n=96,p[n=97
-				opts={attributes:['n']}
+				opts={attributes:[sel.attribute]}
 				var range=this.getTagInRange(fromtag.slot,fromtag.slot+maxgap,sel.tag,opts);
 				for (var i in range) {
 					if (parseInt(range[i].value,10)>=val+1) return range[i];
@@ -139,26 +169,27 @@ var getTextByTag=function(opts) {
 	var maxslot=opts.maxslot || 1000;
 	
 	var tagseq=opts.ntag;
-	var t=null,t2=null,sel=null;
+	var t=null,tnext=null,sel=null;
 
 	if (opts.selector) {
 		if (typeof opts.selector=='string') {
 			t=se.findTagBySelector(opts.selector);
 			sel=se.parseSelector(opts.selector);
+			sel.db=opts.db;
+			tnext=getNextSelector.apply(se,[sel,t]);
 		} else {
 			opts.selectors=opts.selector;
 			var tags=findTagBySelectors(opts);
 			t=tags[tags.length-1];//take the last one
 			sel=se.parseSelector(opts.selectors[opts.selectors.length-1]);
+			tnext=t.next;
 		}
 		tagseq=t.ntag;
-		sel.db=opts.db;
-		t2=getNextSelector.apply(se,[sel,t]);
 	} else {
 		t=se.getTag(opts.tag,tagseq);	
-		t2=se.getTag(opts.tag,tagseq+1);		
+		tnext=se.getTag(opts.tag,tagseq+1);		
 	}
-	if (!t2) return "";
+	if (!tnext) return "";
 	/*
 	if (opts.selector) {
 		sel=this.parseSelector(opts.selector);
@@ -189,11 +220,11 @@ var getTextByTag=function(opts) {
 
 	var seqarr=[];
 	opts.extraslot=opts.extraslot||0;
-	for (var i=t.slot;i<t2.slot+opts.extraslot;i++) {
+	for (var i=t.slot;i<tnext.slot+opts.extraslot;i++) {
 		seqarr.push(i); 
 		if (seqarr.length>maxslot) break; 
 	}
-	var out={slot:t.slot, ntag: tagseq, starttag:t, endtag:t2, head:t.head, text:se.getText(seqarr,opts)};
+	var out={slot:t.slot, ntag: tagseq, starttag:t, endtag:tnext, head:t.head, text:se.getText(seqarr,opts)};
 	if (opts.sourceinfo) {
 		out.sourceinfo=se.sourceInfo(t.slot);
 	}

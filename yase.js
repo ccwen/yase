@@ -235,6 +235,7 @@ var getTextRange=function(start,end,opts) {
 	return this.getText(slots,opts);
 }
 var buildToc=function(toc,opts) {
+	opts=opts||{};
 	var toctree=toc;
 	if (this.meta.toc && this.meta.toc[toc] ) toctree=this.meta.toc[toc] ;
 	
@@ -281,12 +282,19 @@ var genToc=function(toc,opts) {
 	var output=[];
 	for (var i in toctree) {
 		var sel=this.parseSelector(toctree[i]);
-		var vposarr=this.get(['tags',sel.tag,'_vpos']);
-		for (var j in vposarr) {
-			//toc level, vpos, tagseq
-			output.push( [ parseInt(i), vposarr[j], parseInt(j)])	
+		var vposarr=this.get(['tags',sel.tag,"_vpos"]);
+
+		if (sel.key) {
+			var keyarr=this.get(['tags',sel.tag,sel.key],true);
+			for (var j in keyarr) {
+				j=parseInt(j,10);
+				output.push( [ parseInt(i), vposarr[j] ,j] );
+			}			
+		} else {
+			for (var j in vposarr) {//toc level, vpos, tagseq
+				output.push( [ parseInt(i,10), vposarr[j], parseInt(j,10)])	;
+			}		
 		}
-		
 	}
 	output.sort( function(a,b) {return a[1]-b[1]});
 	return output;

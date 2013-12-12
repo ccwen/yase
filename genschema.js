@@ -48,6 +48,7 @@ Genschema=function() {
 				I[attrs[j]]={ regstr: ' '+attrs[j]+'="(.*?)"', 
 				unique: opts.unique, 
 				saveval:opts.saveval, 
+				savehead:opts.savehead, 
 				sparseval:opts.sparseval, 
 				prefix:opts.prefix,
 				range:opts.range,
