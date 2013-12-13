@@ -128,7 +128,12 @@ var findTagBySelectors=function(opts) {
 			start=r[0].slot;
 			sel.db=opts.db;
 			var nexttag=getNextSelector.apply(se,[sel,r[0]]);
-			r[0].next=nexttag;
+			if (nexttag) {
+				r[0].next=nexttag;	
+			} else {
+				if (i) r[0].next={slot:o.end};	//use parent end range
+			}
+			
 			out.push(r[0]);
 		} else {
 			return out;
@@ -189,34 +194,8 @@ var getTextByTag=function(opts) {
 		t=se.getTag(opts.tag,tagseq);	
 		tnext=se.getTag(opts.tag,tagseq+1);		
 	}
-	if (!tnext) return "";
-	/*
-	if (opts.selector) {
-		sel=this.parseSelector(opts.selector);
-		opts.tag=sel.tag;
-		opts.attribute=sel.attribute;
-		opts.value=sel.value;
-	}
-	if (typeof opts.ntag !='undefined') {
-		tagseq=parseInt(opts.ntag);
-	} else {
-		if (typeof opts.value=='string') {
-			var depth=this.meta.schema[opts.tag]
-				      .indexattributes[opts.attribute].depth;
-			if (depth>1) {
-				opts.value=opts.value.split('.');
-				while (opts.value.length<depth) opts.value.push(' ');
-			}
-		}
-		var par=['tags',opts.tag,opts.attribute+'='].concat(opts.value);
-		var tagseq=this.get(par) ;
-	}
-
-	var t=this.getTag(opts.tag,tagseq);
-	t.id=this.getTagAttr(opts.tag, tagseq, opts.attribute || 'id');
-	var t2=this.getTag(opts.tag,1+tagseq);
-	t2.id=this.getTagAttr(opts.tag, 1+tagseq, opts.attribute || 'id');
-	*/
+	if (!tnext) return;
+	
 
 	var seqarr=[];
 	opts.extraslot=opts.extraslot||0;
