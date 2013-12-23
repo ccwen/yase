@@ -198,7 +198,7 @@ var matchPosting=function(pl) {
 	return plist.matchPosting(pl,this.groupposting,r.start,r.end);
 }
 var groupBy=function(gu) {
-	gu=gu||this.opts.groupunit||defaultgroupunit||'';
+	gu=gu||this.opts.groupunit||'';
 
 	if (this.phase<1) this.load();
 	if (this.phase>=2) return this;
