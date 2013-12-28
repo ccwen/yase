@@ -192,6 +192,7 @@ var normalizeToken=function(tk) {
 
 var expandToken=function(fullpath,path,opts) {
 	var out=[];
+	opts=opts||{};
 	path=JSON.parse(JSON.stringify(path))
 	path.unshift('postings')
 	var out1=this.keys(path);
