@@ -1,0 +1,19 @@
+{
+  "name": "yase",
+  "repo": "yapcheahshen/yase",
+  "description": "test",
+  "version": "0.0.1",
+  "keywords": [],
+  "dependencies": {
+
+  },
+  "development": {},
+  "license": "MIT",
+  "main": "index_chrome.js",
+  "scripts": [
+    "yase.js","binarysearch.js","boolsearch.js","rankvsm.js","highlight.js","querysyntax_google.js",
+    "index_chrome.js","plist.js","search.js","yase_api.js","taghandlers.js","schema.js",
+    "splitter.js","tokenize.js"
+  ],
+  "remotes": []
+}

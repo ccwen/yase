@@ -9,7 +9,10 @@ QUnit.test("gettext",function() {
 });
 QUnit.test("gettag",function() {
 		var r=db.getTag('pb.V',0);
-		deepEqual(r,{vpos:2561,slot:10,offset:1,name:'pb.V'});
+		equal(r.name,'pb.V');
+		equal(r.slot,10);
+		equal(r.vpos,2561);
+		equal(r.offset,1);
 });
 QUnit.test("findtag",function() {
 		var r=db.findTag('pb.V','n','1.0001');
@@ -20,4 +23,11 @@ QUnit.test("expand",function() {
 		var tree=db.customfunc.token2tree.apply(db,["samayaṁ"]);
 		var expanded=db.customfunc.expandToken.apply(db, [ tree,[] ]);
 		console.log(expanded)
+		equal(true,true)
 });
+
+QUnit.test("search",function() {
+	var res=db.search({query:"anicca",output:["text"]});
+	console.log(res)
+	equal(true,true)
+})

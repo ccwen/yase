@@ -5,8 +5,10 @@ yadb for supporting full text search
 */
 
 var plist=require('./plist.js');
-var binarysearch=require('./binarysearch')
-var search1=require('./search1');
+var binarysearch=require('./binarysearch');
+
+if (typeof process!='undefined') var search1=require('./search1');
+
 var search=require('./search');
 var highlight=require('./highlight');
 var getPosting=function(token) {
@@ -19,8 +21,6 @@ var getPosting=function(token) {
 	var r=this.get(tokenarr,true);
 	return r;
 }
-
-
 
 var getKeys=function(id) {
 	return this.getkeys(id);
@@ -317,16 +317,21 @@ var fetchPage=function(tagname,seq,opts) {
 	}
 	return r;
 }
-var yase_use = function(fn,opts) { 
+var yase_use = function(fn,opts,callback) { 
 	var db = null;
+	opts=opts||{};
 	var se_preload=function(instance) {
 		if (instance.yaseloaded) return;
 		instance.meta=instance.get(['meta'],true);
-		instance.customfunc=instance.get(['customfunc'],true);
-		for (var i in instance.customfunc) {
-			//compile the custom function
-			var r = new Function(instance.customfunc[i])
-			instance.customfunc[i]=r();
+		if (!opts.customfunc) {
+			instance.customfunc=instance.get(['customfunc'],true);
+			for (var i in instance.customfunc) {
+				//compile the custom function
+				var r = new Function(instance.customfunc[i])
+				instance.customfunc[i]=r();
+			}
+		} else {
+			instance.customfunc=opts.customfunc;
 		}
 		instance.meta.schema=JSON.parse(instance.meta.schema);
 		instance.meta.slotsize=2<<(instance.meta.slotshift -1);
@@ -370,17 +375,35 @@ var yase_use = function(fn,opts) {
 		instance.getdb=function() {return db};
 
 		/* old interface */
-		instance.phraseSearch=search1.phraseSearch;
-		instance.boolSearch=search1.boolSearch;
-		instance.renderhits=search1.renderhits;
+		if (search1) {
+			instance.phraseSearch=search1.phraseSearch;
+			instance.boolSearch=search1.boolSearch;
+			instance.renderhits=search1.renderhits;
+		}
 		
 	}
 
 	if (fn) {
-		var yadb=require('yadb').api();
-		db = yadb.open(fn,opts); // make use of yadb db pool 
-		if (!db) return null;
-		se_preload(db);
+		if (typeof process!='undefined') {
+			var yadb=require('yadb').api();	
+		} else {
+			var yadb=require('../yadb');
+		}
+
+
+		if (callback) {
+			yadb.open(fn,opts,function(db){
+				se_preload(db);
+				db.yadb=yadb;
+				callback(db);
+			}); 
+		} else {//legacy
+			db=yadb.open(fn,opts);// make use of yadb db pool 
+			if (!db) return null;
+			db.yadb=yadb;
+			se_preload(db);
+		}
+
 	} else throw 'missing filename';
 
 	//if (!db) throw 'cannot use db '+fn;		
