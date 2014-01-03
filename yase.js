@@ -317,13 +317,19 @@ var fetchPage=function(tagname,seq,opts) {
 	}
 	return r;
 }
-var yase_use = function(fn,opts,callback) { 
+if (typeof process!='undefined') {
+	var yadb=require('yadb').api();	
+} else {
+	var yadb=require('../yadb').api();
+}
+
+var yase_use = function(fn,opts) { 
 	var db = null;
 	opts=opts||{};
 	var se_preload=function(instance) {
 		if (instance.yaseloaded) return;
 		instance.meta=instance.get(['meta'],true);
-		if (!opts.customfunc) {
+		if (!instance.customfunc && !opts.customfunc) {
 			instance.customfunc=instance.get(['customfunc'],true);
 			for (var i in instance.customfunc) {
 				//compile the custom function
@@ -331,7 +337,9 @@ var yase_use = function(fn,opts,callback) {
 				instance.customfunc[i]=r();
 			}
 		} else {
-			instance.customfunc=opts.customfunc;
+			if (!instance.customfunc) {
+				instance.customfunc=opts.customfunc;
+			}
 		}
 		instance.meta.schema=JSON.parse(instance.meta.schema);
 		instance.meta.slotsize=2<<(instance.meta.slotshift -1);
@@ -384,25 +392,13 @@ var yase_use = function(fn,opts,callback) {
 	}
 
 	if (fn) {
-		if (typeof process!='undefined') {
-			var yadb=require('yadb').api();	
-		} else {
-			var yadb=require('../yadb');
-		}
 
 
-		if (callback) {
-			yadb.open(fn,opts,function(db){
-				se_preload(db);
-				db.yadb=yadb;
-				callback(db);
-			}); 
-		} else {//legacy
-			db=yadb.open(fn,opts);// make use of yadb db pool 
-			if (!db) return null;
-			db.yadb=yadb;
-			se_preload(db);
-		}
+		//debugger
+		db=yadb.open(fn,opts);// make use of yadb db pool 
+		if (!db) return null;
+		db.yadb=yadb;
+		se_preload(db);
 
 	} else throw 'missing filename';
 
@@ -410,5 +406,6 @@ var yase_use = function(fn,opts,callback) {
 	return db;
 }
 
+yase_use.yadb=yadb;
 module.exports=yase_use;
 return yase_use;

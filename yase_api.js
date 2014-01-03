@@ -1,4 +1,4 @@
-﻿var yase=require('./yase');
+var yase=require('./yase');
 
 var phraseSearch=function(opts) {
 	var se=yase(opts.db);
@@ -263,7 +263,7 @@ var keyExists=function(path) { //path including database name
 var getRaw=function(path) { //path including database name
 	var res=null;
 	if (!path || path.length==0) {
-		var res=JSON.parse(JSON.stringify(yase.yadb.api().getRaw([],{loadmeta:true})));
+		var res=JSON.parse(JSON.stringify(yase.yadb.getRaw([],{loadmeta:true})));
 	} else {
 		var dbname=path.shift();
 		dbname=dbname.replace(':','/');
@@ -327,7 +327,7 @@ var exist=function(names) {
 	return out;
 }
 var enumLocalYdb=function(folder) {
-	return this.yadb.api().getRaw([],{folder:folder,loadmeta:true});
+	return this.yadb.getRaw([],{folder:folder,loadmeta:true});
 }
 //return database and slot with same id, except current db
 var sameId=function(opts) {
@@ -345,10 +345,13 @@ var sameId=function(opts) {
 	}
 	return res;
 }
+var prepare=function(opts,callback) {
+	yase.yadb.prepare(opts,callback);
+}
 var installservice=function(services) { // so that it is possible to call other services
 	if (!services) return;
 	//yase_api(services);
-	require('yadb').api(services);
+	if (!services['yadb']) require('yadb').api(services);
 	services['yase']={ 
 	getText:getText,
 	fillText:fillText,
@@ -373,7 +376,9 @@ var installservice=function(services) { // so that it is possible to call other 
 	getBlob:getBlob,
 	enumLocalYdb:enumLocalYdb,
 	sameId:sameId,
-	version: function() { return require('./package.json').version },
+	prepare:prepare,
+	yadb:services['yadb']
+	//version: function() { return require('./package.json').version },
 	//initialize:initialize
 	};
 	
