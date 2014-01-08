@@ -101,6 +101,7 @@ var getRange=function(start,end,opts) {
 	return output;
 }
 var getTagInRange=function(start,end,tagname,opts) {
+	
 	opts=opts||{};
 	var vpos=this.customfunc.getTagPosting.apply(this,[tagname]);
 	var startvpos=start*this.meta.slotsize;

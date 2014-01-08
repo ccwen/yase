@@ -141,6 +141,7 @@ var findTagBySelectors=function(opts) {
 }
 
 var getNextSelector=function(sel,fromtag) {
+
 	  var maxgap=1000;
 	  var vals=sel.value.split(".");
 		vals[vals.length-1]=parseInt(vals[vals.length-1],10);
@@ -150,23 +151,30 @@ var getNextSelector=function(sel,fromtag) {
 			sel.value=vals.join(".");sel.start=fromtag.slot;
 			var tags=findTag(sel);
 			var tag=null;
+
 			if (tags.length) tag=tags[0];
 			if (!tag)return null;
+			/*
 			if (tag.slot-fromtag.slot>maxgap) { //too far , TIK , ATT p[n] is not continuous D15 missing p[n=96,p[n=97
 				opts={attributes:[sel.attribute]}
 				var range=this.getTagInRange(fromtag.slot,fromtag.slot+maxgap,sel.tag,opts);
 				for (var i in range) {
-					if (parseInt(range[i].value,10)>=val+1) return range[i];
+					if (parseInt(range[i].value,10)>=vals[vals.length-1]-1) {
+
+						return range[i];
+					}
 				}
 			} else {
+			*/
 				return tag;
-			}
+			//}
 		} else {
 			return this.getTag(fromtag.tag,fromtag.ntag+1);	
 		}
 		return null;
 }
 var getTextByTag=function(opts) {
+
 	var se=yase(opts.db);
 
 	var maxslot=opts.maxslot || 1000;
@@ -182,12 +190,13 @@ var getTextByTag=function(opts) {
 			tnext=getNextSelector.apply(se,[sel,t]);
 		} else {
 			opts.selectors=opts.selector;
+
 			var tags=findTagBySelectors(opts);
 			t=tags[tags.length-1];//take the last one
 			sel=se.parseSelector(opts.selectors[opts.selectors.length-1]);
-			tnext=t.next;
+			if (t) tnext=t.next;
 		}
-		tagseq=t.ntag;
+		if (t) tagseq=t.ntag;
 	} else {
 		t=se.getTag(opts.tag,tagseq);	
 		tnext=se.getTag(opts.tag,tagseq+1);		
