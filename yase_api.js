@@ -111,7 +111,7 @@ var findTagBySelectors=function(opts) {
 			sel.db=opts.db;
 			//get the range end of parent
 			var next=getNextSelector.apply(se,[sel,out[out.length-1]]);
-			o.end=next.slot;
+			if (next) o.end=next.slot;
 		}
 
 		var sel=se.parseSelector(o.selector);
